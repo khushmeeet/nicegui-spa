@@ -25,7 +25,11 @@ def accounts():
         ui.button("Toggle Right Drawer", on_click=lambda: right_drawer.clear()).classes("mt-4")
         ui.space()
 
+        def raise_exception():
+            raise Exception("This is an exception")
+
         ui.label().classes("text-center").bind_text_from(state, "text", backward=lambda x: f"Current Text: {x}").classes("m-2")
+        ui.button("Raise Exception", on_click=raise_exception).classes("mt-4")
 
         if right_drawer and right_drawer_rendered_by != "accounts":
             app.storage.client["right_drawer_rendered_by"] = "accounts"
