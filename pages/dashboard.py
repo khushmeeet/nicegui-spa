@@ -1,5 +1,6 @@
 from nicegui import ui, app
 
+
 def dashboard():
     right_drawer: ui.right_drawer = app.storage.client["right_drawer"]
     right_drawer_rendered_by = app.storage.client["right_drawer_rendered_by"]

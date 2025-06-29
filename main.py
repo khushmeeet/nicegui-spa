@@ -23,7 +23,7 @@ def main(path: str = None):
     app.storage.client["right_drawer_right_arrow_visible"] = False
     app.storage.client["active_page"] = "dashboard"
 
-    app.storage.client["active_page"] = path.strip('/') if path.strip('/') else "dashboard"
+    app.storage.client["active_page"] = path.strip("/") if path.strip("/") else "dashboard"
 
     ld = left_drawer(router)
     rd = right_drawer()
@@ -35,7 +35,7 @@ def main(path: str = None):
     for page in pages.values():
         router.add(page["path"])(page["show"])
 
-    router.frame().classes("w-full p-5 pt-0 gap-0").on('open', lambda e: router.open(e.args))
+    router.frame().classes("w-full p-5 pt-0 gap-0").on("open", lambda e: router.open(e.args))
 
 
 ui.run(port=8123)
