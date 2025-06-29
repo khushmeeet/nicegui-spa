@@ -30,7 +30,6 @@ def main(path: str = None):
     header(ld, rd)
 
     app.storage.client["right_drawer"] = rd
-    # app.storage.client["right_drawer_content"] = rdc
     app.storage.client["right_drawer_rendered_by"] = ""
 
     for page in pages.values():
