@@ -5,7 +5,6 @@ from left_drawer import left_drawer_open, left_drawer_collapse
 
 
 def header(left_drawer: ui.left_drawer = None, right_drawer: ui.right_drawer = None):
-
     with ui.header().props("bordered").classes("items-center justify-between bg-transparent") as header:
         with ui.element("div").classes("flex items-center gap-2"):
             ui.button(
