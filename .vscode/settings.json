@@ -12,11 +12,6 @@
         "**/__pycache__": true
     },
     "[python]": {
-        "diffEditor.ignoreTrimWhitespace": false,
-        "editor.defaultColorDecorators": "never",
-        "gitlens.codeLens.symbolScopes": ["!Module"],
-        "editor.formatOnType": true,
-        "editor.wordBasedSuggestions": "off",
         "editor.defaultFormatter": "ms-python.black-formatter",
         "editor.formatOnSave": true
     },
