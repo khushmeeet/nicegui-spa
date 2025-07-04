@@ -16,10 +16,10 @@ def header(left_drawer: ui.left_drawer = None, right_drawer: ui.right_drawer = N
             ui.button(on_click=lambda: left_drawer.toggle(), icon="menu").classes("text-grey-6 lg:hidden").props("flat")
 
         with ui.element("div").classes("gap-2"):
-            with ui.row().classes("flex-nowrap"):
+            with ui.row().classes("flex-nowrap w-48 justify-end"):
                 ui.slider(min=300, max=900, value=400).classes("w-18 max-lg:hidden").on("update:model-value", lambda e: right_drawer.props(f"width={e.args}")).bind_visibility_from(
                     right_drawer, "value"
                 )
-                ui.button(on_click=lambda: right_drawer.toggle(), icon="menu").props("flat").classes("text-grey-6").bind_visibility_from(app.storage.client, "right_drawer_left_arrow_visible")
+                ui.button(on_click=lambda: right_drawer.toggle(), icon="menu").props("flat").classes("text-grey-6")
 
         return header
