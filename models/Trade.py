@@ -1,22 +1,22 @@
-from enum import Enum
 from sqlalchemy import (
-    Column,
-    ForeignKey,
-    Integer,
-    String,
     Float,
+    Column,
+    String,
+    Integer,
+    Boolean,
     DateTime,
+    ForeignKey,
     Enum as SQLAlchemyEnum,
 )
 from sqlalchemy.orm import relationship
 
 from db.base import Base
 from models.enums import (
-    TradeSuccessProbabilityType,
-    DirectionType,
     OrderType,
+    DirectionType,
     TradeStatusType,
     TradingMindState,
+    TradeSuccessProbabilityType,
 )
 
 
@@ -62,5 +62,7 @@ class Trade(Base):
     comments = Column(String, nullable=True)
 
     notes = Column(String, nullable=True)  # possibly a separate table
+
+    validated_from_backtest = Column(Boolean, nullable=False, default=False)
 
     # ids returned by the MT5 or CT5

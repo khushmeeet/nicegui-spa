@@ -5,3 +5,4 @@ from .Instrument import *
 from .Suffix import *
 from .Trade import *
 from .Strategy import *
+from .TradeNote import *
