@@ -1,15 +1,15 @@
 """Add tables
 
-Revision ID: c2f3385831e7
+Revision ID: c96013bf228b
 Revises: 
-Create Date: 2025-07-04 21:59:53.781146
+Create Date: 2025-07-05 21:46:11.246147
 
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = 'c2f3385831e7'
+revision = 'c96013bf228b'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -57,12 +57,13 @@ def upgrade():
     sa.Column('type', sa.Enum('demo', 'live', name='accounttype'), nullable=False),
     sa.Column('platform', sa.Enum('mt5', 'mt4', 'ct5', name='platformtype'), nullable=False),
     sa.Column('path', sa.String(), nullable=False),
-    sa.Column('currency', sa.Enum('USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'NZD', 'CNY', 'HKD', 'NOK', 'SGD', 'KRW', 'SEK', 'MXN', name='currencytype'), nullable=False),
+    sa.Column('currency', sa.Enum('USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'NZD', 'CNY', 'HKD', 'NOK', 'SGD', 'KRW', 'SEK', 'MXN', name='currencytype'), nullable=True),
     sa.Column('balance', sa.Float(), nullable=True),
     sa.Column('portable', sa.Boolean(), nullable=False),
     sa.Column('server', sa.String(), nullable=False),
     sa.Column('broker_id', sa.Integer(), nullable=True),
     sa.Column('archived', sa.Boolean(), nullable=False),
+    sa.Column('is_valid', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['broker_id'], ['brokers.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

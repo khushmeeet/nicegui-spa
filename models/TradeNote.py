@@ -12,4 +12,4 @@ class TradeNote(Base):
     trade_id = Column(Integer, ForeignKey("trades.id"), nullable=False)
     note = Column(String, nullable=False)
 
-    trade = relationship("Trade", back_populates="notes")
+    trade = relationship("Trade", backref="note")

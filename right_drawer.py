@@ -8,7 +8,7 @@ def right_drawer():
         ui.right_drawer(bottom_corner=True, elevated=False, bordered=True, value=visible)
         .props(f"width={width}")
         .classes("bg-gray-100")
-        .props("overlay v-touch-drawer")
+        .props("v-touch-drawer")
         .bind_value(app.storage.client, "right_drawer_visible")
     ) as right_drawer:
         return right_drawer

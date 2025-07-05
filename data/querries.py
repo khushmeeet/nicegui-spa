@@ -30,7 +30,7 @@ def get_all_items_from_account() -> pd.DataFrame:
             .outerjoin(Instrument, Instrument.account_id == Account.id)
             .group_by(Account.id, Broker.name)
         )
-        accounts: List[Account] = query.all()
+        accounts = query.all()
         for acc in accounts:
             data.append(
                 {
