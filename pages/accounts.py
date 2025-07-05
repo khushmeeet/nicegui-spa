@@ -9,20 +9,9 @@ def accounts():
         ui.markdown("## 💼 Accounts")
         ui.label("Manage your trading accounts")
         ui.space()
+        ui.button("Add Account", icon="add", on_click=lambda: right_drawer.toggle())
 
-        with ui.row().classes("w-full"):
-            ui.button("Add Account", on_click=lambda: ui.notify("Add Account clicked"))
-            ui.button("Archive Account", on_click=lambda: ui.notify("Archive Account clicked")).props("disabled")
-            ui.button("Edit Account", on_click=lambda: ui.notify("Edit Account clicked")).props("disabled")
         ui.space()
-
-        ui.button("Toggle Right Drawer", on_click=lambda: right_drawer.clear()).classes("mt-4")
-        ui.space()
-
-        def raise_exception():
-            raise Exception("This is an exception")
-
-        ui.button("Raise Exception", on_click=raise_exception).classes("mt-4")
 
         if right_drawer and right_drawer_rendered_by != "accounts":
             app.storage.client["right_drawer_rendered_by"] = "accounts"
