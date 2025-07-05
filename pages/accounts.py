@@ -4,11 +4,6 @@ from nicegui import ui, app
 def accounts():
     right_drawer: ui.right_drawer = app.storage.client["right_drawer"]
     right_drawer_rendered_by = app.storage.client["right_drawer_rendered_by"]
-    state = {"width": 300, "text": "My Val Test"}
-
-    def on_width_change(value):
-        state["width"] = value
-        right_drawer.props(f"width={state['width']}")
 
     with ui.column().classes("w-full h-full text-lg"):
         ui.markdown("## 💼 Accounts")
@@ -27,20 +22,25 @@ def accounts():
         def raise_exception():
             raise Exception("This is an exception")
 
-        ui.label().classes("text-center").bind_text_from(state, "text", backward=lambda x: f"Current Text: {x}").classes("m-2")
         ui.button("Raise Exception", on_click=raise_exception).classes("mt-4")
 
         if right_drawer and right_drawer_rendered_by != "accounts":
             app.storage.client["right_drawer_rendered_by"] = "accounts"
             right_drawer.clear()
+
             with right_drawer:
-                ui.label("Right Drawer for Accounts").classes("text-lg")
-                ui.button("Close", on_click=lambda: right_drawer.toggle())
-                ui.slider(min=300, max=800, value=state["width"], step=10, on_change=lambda e: on_width_change(e.value)).classes("m-2").props("color=primary").bind_value(state, "width")
-                ui.input(
-                    label="Right Drawer Account Text",
-                    value="",
-                ).classes("m-2").props(
-                    "color=primary"
-                ).bind_value(state, "text")
-                ui.label().bind_text_from(state, "text", backward=lambda x: f"Current Text: {x}").classes("m-2")
+                ui.markdown("##### ➕ Add Account")
+                with ui.grid().classes("w-full"):
+                    ui.input(label="Name").classes("w-full")
+                    ui.select(options=["Broker 1", "Broker 2", "Broker 3"], label="Broker").classes("w-full")
+                    ui.input(label="Login").classes("w-full")
+                    ui.input(label="Password", password=True, password_toggle_button=True).classes("w-full")
+                    ui.select(label="Type", options=["Live", "Demo"]).classes("w-full")
+                    ui.select(label="Platform", options=["MetaTrader 5", "cTrader 5"]).classes("w-full")
+                    ui.input(label="Server").classes("w-full")
+                    ui.checkbox("Is Portable", value=True).classes("w-full")
+                ui.upload(label="Path", multiple=False, max_files=1).classes("w-full")
+                with ui.row():
+                    ui.button("Save", icon="save", on_click=lambda: ui.notify("Add Account clicked", position="bottom-right"))
+                    ui.button("Cancel", icon="close", on_click=lambda: right_drawer.toggle())
+                    ui.button("Clear", icon="delete_outline", on_click=lambda: ui.notify("Add Account clicked"))

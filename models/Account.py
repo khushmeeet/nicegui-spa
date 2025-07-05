@@ -50,6 +50,8 @@ class Account(Base):
 
     archived = Column(Boolean, nullable=False, default=False)
 
+    is_valid = Column(Boolean, nullable=False, default=False)
+
     def __init__(self, **kwargs):
         password = kwargs.pop("password", None)
         super().__init__(**kwargs)

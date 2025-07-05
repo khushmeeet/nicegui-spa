@@ -19,8 +19,8 @@ def main(path: str = None):
 
     app.storage.client["left_drawer_left_arrow_visible"] = True
     app.storage.client["left_drawer_right_arrow_visible"] = False
-    app.storage.client["right_drawer_left_arrow_visible"] = True
-    app.storage.client["right_drawer_right_arrow_visible"] = False
+    app.storage.client["right_drawer_width"] = 400
+    app.storage.client["right_drawer_visible"] = True
     app.storage.client["active_page"] = "dashboard"
 
     app.storage.client["active_page"] = path.strip("/") if path.strip("/") else "dashboard"
