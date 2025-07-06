@@ -1,5 +1,6 @@
 from .dashboard import dashboard
 from .accounts import accounts
+from .trading import trading
 
 pages = {
     "dashboard": {
@@ -15,5 +16,12 @@ pages = {
         "label": "Accounts",
         "icon": "business_center",
         "path": "/accounts",
+    },
+    "trading": {
+        "show": trading,
+        "object": None,
+        "label": "Trading",
+        "icon": "candlestick_chart",
+        "path": "/trading",
     },
 }
