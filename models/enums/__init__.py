@@ -4,3 +4,4 @@ from .trade_type import *
 from .currencies import *
 from .account_type import *
 from .platform_type import *
+from .exit_reason import *

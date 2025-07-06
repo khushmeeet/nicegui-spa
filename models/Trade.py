@@ -14,6 +14,7 @@ from db.base import Base
 from models.enums import (
     OrderType,
     DirectionType,
+    ExitReasonType,
     TradeStatusType,
     TradingMindState,
     TradeSuccessProbabilityType,
@@ -57,7 +58,7 @@ class Trade(Base):
     duration = Column(String, nullable=True)
     tags = Column(String, nullable=True)
     reward_risk = Column(Float, nullable=True)
-    exit_reason = Column(String, nullable=True)
+    exit_reason = Column(SQLAlchemyEnum(ExitReasonType), nullable=True)
     exit_reason_details = Column(String, nullable=True)
     comments = Column(String, nullable=True)
 
