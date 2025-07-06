@@ -1,15 +1,15 @@
 """Add tables
 
-Revision ID: c96013bf228b
+Revision ID: 53a2431561ab
 Revises: 
-Create Date: 2025-07-05 21:46:11.246147
+Create Date: 2025-07-06 16:44:11.642833
 
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = 'c96013bf228b'
+revision = '53a2431561ab'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -111,10 +111,10 @@ def upgrade():
     sa.Column('duration', sa.String(), nullable=True),
     sa.Column('tags', sa.String(), nullable=True),
     sa.Column('reward_risk', sa.Float(), nullable=True),
-    sa.Column('exit_reason', sa.String(), nullable=True),
+    sa.Column('exit_reason', sa.Enum('take_profit', 'stop_loss', 'cancelled', 'manual', name='exitreasontype'), nullable=True),
     sa.Column('exit_reason_details', sa.String(), nullable=True),
-    sa.Column('comments', sa.String(), nullable=True),
-    sa.Column('notes', sa.String(), nullable=True),
+    sa.Column('actual_pnl', sa.Float(), nullable=True),
+    sa.Column('actual_reward_risk', sa.Float(), nullable=True),
     sa.Column('validated_from_backtest', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['account_id'], ['accounts.id'], ),
     sa.ForeignKeyConstraint(['instrument_id'], ['instruments.id'], ),

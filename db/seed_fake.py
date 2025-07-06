@@ -1,14 +1,16 @@
 import sys
 import os
+import math
 import random as rnd
 from typing import List
+from datetime import datetime, timedelta
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 from models import Broker, Account, PlatformType, Symbol, Instrument, Suffix, CurrencyType, Strategy
-from models.enums import TradeSuccessProbabilityType, TradingMindState, TradeStatusType
+from models.enums import TradeSuccessProbabilityType, TradingMindState, TradeStatusType, DirectionType, OrderType, ExitReasonType
 from db.get_session import get_session
 
 from data.commands import add_instrument
@@ -209,22 +211,100 @@ def seed_strategies(clear_existing: bool = True):
         return strategies
 
 
+def random_duration(min_minutes=30, max_minutes=2880):
+    duration_minutes = rnd.randint(min_minutes, max_minutes)
+    return timedelta(minutes=duration_minutes)
+
+
+def random_entry_time(start_year=2021, end_year=2022):
+    start = datetime(start_year, 1, 1)
+    end = datetime(end_year, 12, 31)
+    delta = end - start
+    random_days = rnd.randint(0, delta.days)
+    random_minutes = rnd.randint(0, 1440)
+    return start + timedelta(days=random_days, minutes=random_minutes)
+
+
 def seed_trades(accounts, symbols, strategies):
     account = accounts[0]
     probability = rnd.choice(list(TradeSuccessProbabilityType))
     mindstate = rnd.choice(list(TradingMindState))
     symbol_id = rnd.randint(1, len(symbols))
+    symbol = symbols[symbol_id - 1]
     strategy_id = rnd.randint(1, len(strategies))
-    status = TradeStatusType.CLOSED
+    strategy = strategies[strategy_id - 1]
+    status = TradeStatusType.active
+    direction = rnd.choice(list(DirectionType))
+    order_type = rnd.choice(list(OrderType))
+    if rnd.random() >= 0.65:
+        order_type = OrderType.market
 
-    # mindstate = 0
-    # strategy = 1
-    # symbol = 1
-    # status= closed
-    # direction = 1
-    # order_type = market
-    # lots=  rand 0.01 to 0.35
-    # slpips = rnad (15 to 150)
+    risk = 0.005
+    lots = 0.1
+    if probability == TradeSuccessProbabilityType.low:
+        risk = 0.005
+        lots = 0.1
+        win_chance = 0.52
+    elif probability == TradeSuccessProbabilityType.medium:
+        risk = 0.0075
+        lots = 0.25
+        win_chance = 0.61
+    else:
+        risk = 0.01
+        lots = 0.5
+        win_chance = 0.72
+
+    win_loss = 1 if rnd.random() <= win_chance else 0
+
+    pips = rnd.randint(15, 150)
+    rr = rnd.choice([1.0, 1.5, 2.0])
+    stop_loss_pips = pips
+    take_profit_pips = rr * stop_loss_pips
+
+    entry_price = round(1 + rnd.random(), 5)
+    if direction == DirectionType.long:
+        stop_loss_price = round(entry_price - stop_loss_pips * 0.0001, 5)
+        take_profit_price = round(entry_price + take_profit_pips * 0.0001, 5)
+    else:
+        stop_loss_price = round(entry_price + stop_loss_pips * 0.0001, 5)
+        take_profit_price = round(entry_price - take_profit_pips * 0.0001, 5)
+
+    entry_time = random_entry_time(2021, 2024)
+    duration = random_duration(min_minutes=30, max_minutes=2880)
+    exit_time = entry_time + duration
+
+    reward_risk = take_profit_pips / stop_loss_pips
+
+    exit_price = None
+    exit_reason = None
+    if win_loss == 1:
+        exit_price = take_profit_price
+        exit_reason = ExitReasonType.take_profit
+    else:
+        exit_price = stop_loss_price
+        exit_reason = ExitReasonType.stop_loss
+
+    actual_reward_risk = reward_risk
+
+    if rnd.random() <= 0.02 and order_type != OrderType.market and status == TradeStatusType.pending:
+        exit_reason = ExitReasonType.cancelled
+        exit_price = None
+        actual_reward_risk = None
+
+    if rnd.random() <= 0.05:
+        exit_reason = ExitReasonType.manual
+        if win_loss == 1:
+            if direction == DirectionType.long:
+                exit_price = entry_price + (take_profit_price - entry_price) * rnd.random()
+            else:
+                exit_price = entry_price - (entry_price - take_profit_price) * rnd.random()
+            actual_reward_risk = math.abs(exit_price - entry_price) / stop_loss_pips
+        else:
+            if direction == DirectionType.long:
+                exit_price = entry_price - (entry_price - stop_loss_price) * rnd.random()
+            else:
+                exit_price = entry_price + (stop_loss_price - entry_price) * rnd.random()
+            actual_reward_risk = take_profit_pips / math.abs(entry_price - exit_price)
 
 
 def seed_all():

@@ -60,10 +60,10 @@ class Trade(Base):
     reward_risk = Column(Float, nullable=True)
     exit_reason = Column(SQLAlchemyEnum(ExitReasonType), nullable=True)
     exit_reason_details = Column(String, nullable=True)
-    comments = Column(String, nullable=True)
+    # comments = Column(String, nullable=True)
 
-    notes = Column(String, nullable=True)  # possibly a separate table
-
+    actual_pnl = Column(Float, nullable=True)
+    actual_reward_risk = Column(Float, nullable=True)
     validated_from_backtest = Column(Boolean, nullable=False, default=False)
 
     # ids returned by the MT5 or CT5
