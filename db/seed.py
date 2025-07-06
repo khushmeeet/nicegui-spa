@@ -40,7 +40,7 @@ def seed_accounts(brokers: List[Broker], clear_existing: bool = True):
 
         accounts = [
             Account(
-                name="John Main",
+                name="John",
                 login="52399047",
                 password="9UtKTv0!2MUeaT",
                 type="demo",
@@ -53,7 +53,7 @@ def seed_accounts(brokers: List[Broker], clear_existing: bool = True):
                 balance=10000,
             ),
             Account(
-                name="Jane Main",
+                name="Jane",
                 login="52399298",
                 password="10Bf@C4NzJWFUF",
                 type="demo",
@@ -105,7 +105,7 @@ def seed_accounts(brokers: List[Broker], clear_existing: bool = True):
                 balance=30000,
             ),
             Account(
-                name="John Spread Betting",
+                name="John Main Spread Betting",
                 login="62081926",
                 password="?afslF8rqn",
                 type="live",
@@ -171,20 +171,20 @@ def seed_symbols(clear_existing: bool = True):
         return symbols
 
 
-def seed_instruments(symbols, accounts, clear_existing: bool = True):
+def seed_instruments(accounts, clear_existing: bool = True):
     with get_session() as session:
         if clear_existing:
             session.query(Suffix).delete()
             session.query(Instrument).delete()
             session.commit()
-        instruments = [
-            add_instrument(session, ticker="EURUSD", account=accounts[0]),
-            add_instrument(session, ticker="EURUSD.ecn", account=accounts[1]),
-            add_instrument(session, ticker="EURUSD_SB", account=accounts[2]),
-            add_instrument(session, ticker="EUR_USD", account=accounts[2]),
-            add_instrument(session, ticker="EUR_USD.r", account=accounts[2]),
-        ]
-        session.add_all(instruments)
+        symbols = session.query(Symbol).all()
+        instruments_for_all_accounts = []
+        for account in accounts:
+            instruments = [add_instrument(session, ticker=symbol.symbol, account=account) for symbol in symbols]
+            for instrument in instruments:
+                instruments_for_all_accounts.append(instrument)
+
+        session.add_all(instruments_for_all_accounts)
         session.commit()
         print("Instruments seeded successfully.")
         return instruments
@@ -197,9 +197,9 @@ def seed_strategies(clear_existing: bool = True):
             session.commit()
 
         strategies = [
-            Strategy(name="Strategy 1"),
-            Strategy(name="Strategy 2"),
-            Strategy(name="Strategy 3"),
+            Strategy(name="Range Breakout"),
+            Strategy(name="Reversal"),
+            Strategy(name="Trend Following"),
         ]
 
         session.add_all(strategies)
@@ -212,7 +212,7 @@ def seed_all():
     brokers = seed_brokers()
     accounts = seed_accounts(brokers)
     symbols = seed_symbols()
-    instruments = seed_instruments(symbols, accounts)
+    instruments = seed_instruments(accounts)
     strategies = seed_strategies()
     return brokers, accounts, symbols, instruments, strategies
 
