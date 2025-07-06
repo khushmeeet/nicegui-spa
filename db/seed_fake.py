@@ -1,11 +1,14 @@
 import sys
 import os
+import random as rnd
 from typing import List
+
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 from models import Broker, Account, PlatformType, Symbol, Instrument, Suffix, CurrencyType, Strategy
+from models.enums import TradeSuccessProbabilityType, TradingMindState, TradeStatusType
 from db.get_session import get_session
 
 from data.commands import add_instrument
@@ -140,29 +143,27 @@ def seed_symbols(clear_existing: bool = True):
             Symbol(symbol="AUDUSD", description="Australian Dollar to US Dollar"),
             Symbol(symbol="NZDUSD", description="New Zealand Dollar to US Dollar"),
             Symbol(symbol="USDCAD", description="US Dollar to Canadian Dollar"),
-            # Minors
             Symbol(symbol="EURGBP", description="Euro to British Pound"),
             Symbol(symbol="EURJPY", description="Euro to Japanese Yen"),
             Symbol(symbol="EURCHF", description="Euro to Swiss Franc"),
+            Symbol(symbol="EURAUD", description="Euro to Australian Dollar"),
+            Symbol(symbol="EURNZD", description="Euro to New Zealand Dollar"),
+            Symbol(symbol="EURCAD", description="Euro to Canadian Dollar"),
             Symbol(symbol="GBPJPY", description="British Pound to Japanese Yen"),
             Symbol(symbol="GBPCHF", description="British Pound to Swiss Franc"),
+            Symbol(symbol="GBPAUD", description="British Pound to Australian Dollar"),
+            Symbol(symbol="GBPNZD", description="British Pound to New Zealand Dollar"),
+            Symbol(symbol="GBPCAD", description="British Pound to Canadian Dollar"),
             Symbol(symbol="AUDJPY", description="Australian Dollar to Japanese Yen"),
+            Symbol(symbol="AUDCHF", description="Australian Dollar to Swiss Franc"),
             Symbol(symbol="AUDNZD", description="Australian Dollar to New Zealand Dollar"),
+            Symbol(symbol="AUDCAD", description="Australian Dollar to Canadian Dollar"),
+            Symbol(symbol="NZDJPY", description="New Zealand Dollar to Japanese Yen"),
+            Symbol(symbol="NZDCHF", description="New Zealand Dollar to Swiss Franc"),
+            Symbol(symbol="NZDCAD", description="New Zealand Dollar to Canadian Dollar"),
             Symbol(symbol="CADJPY", description="Canadian Dollar to Japanese Yen"),
+            Symbol(symbol="CADCHF", description="Canadian Dollar to Swiss Franc"),
             Symbol(symbol="CHFJPY", description="Swiss Franc to Japanese Yen"),
-            Symbol(symbol="EURAUD", description="Euro to Australian Dollar"),
-            # Exotics
-            Symbol(symbol="USDZAR", description="US Dollar to South African Rand"),
-            Symbol(symbol="USDTRY", description="US Dollar to Turkish Lira"),
-            Symbol(symbol="USDMXN", description="US Dollar to Mexican Peso"),
-            Symbol(symbol="USDSEK", description="US Dollar to Swedish Krona"),
-            Symbol(symbol="USDNOK", description="US Dollar to Norwegian Krone"),
-            Symbol(symbol="USDHKD", description="US Dollar to Hong Kong Dollar"),
-            Symbol(symbol="USDSGD", description="US Dollar to Singapore Dollar"),
-            Symbol(symbol="USDPLN", description="US Dollar to Polish Zloty"),
-            Symbol(symbol="USDCNH", description="US Dollar to Chinese Yuan Offshore"),
-            Symbol(symbol="USDHUF", description="US Dollar to Hungarian Forint"),
-            Symbol(symbol="USDTHB", description="US Dollar to Thai Baht"),
         ]
 
         session.add_all(symbols)
@@ -208,12 +209,31 @@ def seed_strategies(clear_existing: bool = True):
         return strategies
 
 
+def seed_trades(accounts, symbols, strategies):
+    account = accounts[0]
+    probability = rnd.choice(list(TradeSuccessProbabilityType))
+    mindstate = rnd.choice(list(TradingMindState))
+    symbol_id = rnd.randint(1, len(symbols))
+    strategy_id = rnd.randint(1, len(strategies))
+    status = TradeStatusType.CLOSED
+
+    # mindstate = 0
+    # strategy = 1
+    # symbol = 1
+    # status= closed
+    # direction = 1
+    # order_type = market
+    # lots=  rand 0.01 to 0.35
+    # slpips = rnad (15 to 150)
+
+
 def seed_all():
     brokers = seed_brokers()
     accounts = seed_accounts(brokers)
     symbols = seed_symbols()
     instruments = seed_instruments(accounts)
     strategies = seed_strategies()
+    seed_trades(accounts, symbols, strategies)
     return brokers, accounts, symbols, instruments, strategies
 
 
