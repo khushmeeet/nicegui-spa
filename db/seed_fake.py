@@ -300,6 +300,9 @@ def mock_pip_value_gbp(symbol_name: str, lot_size: float) -> float:
 
 def seed_trades(accounts, symbols, strategies):
     account = accounts[0]
+    balance = account["Balance"]
+    currency = account["Currency"]
+
     probability = rnd.choice(list(TradeSuccessProbabilityType))
     mindstate = rnd.choice(list(TradingMindState))
     symbol_id = rnd.randint(1, len(symbols))
@@ -313,7 +316,6 @@ def seed_trades(accounts, symbols, strategies):
         order_type = OrderType.market
 
     risk = 0.005
-    lots = 0.1  # compute accurate lot size
     if probability == TradeSuccessProbabilityType.low:
         risk = 0.005
         lots = 0.1
@@ -327,12 +329,15 @@ def seed_trades(accounts, symbols, strategies):
         lots = 0.5
         win_chance = 0.72
 
+    pip_value = FOREX_PIP_VALUES_USD[symbol["symbol"]] if currency == CurrencyType.USD else FOREX_PIP_VALUES_GBP[symbol["symbol"]]
+
     win_loss = 1 if rnd.random() <= win_chance else 0
 
     pips = rnd.randint(15, 150)
     rr = rnd.choice([1.0, 1.5, 2.0])
     stop_loss_pips = pips
     take_profit_pips = rr * stop_loss_pips
+    lots = round(account * risk / (pip_value * stop_loss_pips), 2)
 
     entry_price = round(1 + rnd.random(), 5)
     if direction == DirectionType.long:
@@ -344,7 +349,7 @@ def seed_trades(accounts, symbols, strategies):
 
     # add the chronological time here instead of random entry
     entry_time = random_entry_time(2021, 2024)
-    duration = random_duration(min_minutes=30, max_minutes=2880)
+    duration = random_duration(min_minutes=30, max_minutes=1440)
     exit_time = entry_time + duration
 
     reward_risk = take_profit_pips / stop_loss_pips
@@ -381,8 +386,30 @@ def seed_trades(accounts, symbols, strategies):
             actual_reward_risk = take_profit_pips / math.abs(entry_price - exit_price)
 
     if direction == DirectionType.long:
-        # compute pnl pips and then using pip value compute actual pnl
-        pass
+        pnl_pips = (exit_price - entry_price) * 0.0001
+    else:
+        pnl_pips = (entry_price - exit_price) * 0.0001
+    actual_reward_risk = pnl_pips / stop_loss_pips
+    actual_pnl = pnl_pips * lots * pip_value
+
+    trade = Trade(
+        account_id=account[0],
+        account=account,
+        symbol_id=symbol_id,
+        symbol=symbol,
+        instrument_id=instrument,
+        instrument=instrument,
+        strategy_id=strategy_id,
+        strategy=strategy,
+        status=status,
+        risk=risk,
+        direction=direction,
+        order_type=order_type,
+        lots=lots,
+        units=0,
+        entry_price=entry_price,
+        stop_loss_pips=stop_loss_pips,
+        take_profit_pips=take_profit_pips,
 
 
 def seed_all():
