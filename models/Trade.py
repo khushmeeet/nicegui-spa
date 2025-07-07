@@ -1,3 +1,5 @@
+from datetime import timedelta
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import (
     Float,
     Column,
@@ -28,7 +30,7 @@ class Trade(Base):
 
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
     account = relationship("Account", back_populates="trades")
-    symbol_id = Column(String, ForeignKey("symbols.symbol"), nullable=False)
+    symbol_id = Column(String, ForeignKey("symbols.id"), nullable=False)
     symbol = relationship("Symbol", back_populates="trades")
     instrument_id = Column(Integer, ForeignKey("instruments.id"), nullable=False)
     instrument = relationship("Instrument", back_populates="trades")
@@ -55,7 +57,7 @@ class Trade(Base):
     probability = Column(SQLAlchemyEnum(TradeSuccessProbabilityType), nullable=False)
     mindstate = Column(SQLAlchemyEnum(TradingMindState), nullable=False)
 
-    duration = Column(String, nullable=True)
+    _duration_seconds = Column(Integer, nullable=True)
     tags = Column(String, nullable=True)
     reward_risk = Column(Float, nullable=True)
     exit_reason = Column(SQLAlchemyEnum(ExitReasonType), nullable=True)
@@ -67,3 +69,15 @@ class Trade(Base):
     validated_from_backtest = Column(Boolean, nullable=False, default=False)
 
     # ids returned by the MT5 or CT5
+
+    @hybrid_property
+    def duration(self) -> timedelta:
+        return timedelta(seconds=self._duration_seconds)
+
+    @duration.setter
+    def duration(self, value: timedelta):
+        self._duration_seconds = int(value.total_seconds())
+
+    @duration.expression
+    def duration(cls):
+        return cls._duration_seconds

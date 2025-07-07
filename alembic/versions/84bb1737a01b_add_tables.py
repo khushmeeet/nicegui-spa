@@ -1,15 +1,15 @@
 """Add tables
 
-Revision ID: 53a2431561ab
+Revision ID: 84bb1737a01b
 Revises: 
-Create Date: 2025-07-06 16:44:11.642833
+Create Date: 2025-07-07 22:47:29.877448
 
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '53a2431561ab'
+revision = '84bb1737a01b'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -108,7 +108,7 @@ def upgrade():
     sa.Column('exit_price', sa.Float(), nullable=True),
     sa.Column('probability', sa.Enum('very_high', 'high', 'medium', 'low', name='tradesuccessprobabilitytype'), nullable=False),
     sa.Column('mindstate', sa.Enum('fresh', 'energetic', 'hyper', 'lazy', 'tired', 'sleepy', 'exhausted', 'sad', 'gloomy', 'anxious', 'fearful', 'angry', 'frustrated', 'panicked', 'depressed', 'regretful', 'disappointed', 'vengeful', 'happy', 'calm', 'confident', 'excited', 'hopeful', 'euphoric', 'satisfied', 'grateful', 'focused', 'distracted', 'confused', 'overwhelmed', 'mindful', 'impulsive', 'rational', 'reactive', 'indifferent', 'zoned_out', 'tunnel_vision', 'flow', 'normal', 'active', 'neutral', 'aggressive', 'defensive', 'cautious', 'reckless', 'overconfident', 'disciplined', 'emotional', 'robotic', 'burnt_out', 'patient', 'bored', 'curious', 'stressed', 'under_pressure', 'relief', name='tradingmindstate'), nullable=False),
-    sa.Column('duration', sa.String(), nullable=True),
+    sa.Column('_duration_seconds', sa.Integer(), nullable=True),
     sa.Column('tags', sa.String(), nullable=True),
     sa.Column('reward_risk', sa.Float(), nullable=True),
     sa.Column('exit_reason', sa.Enum('take_profit', 'stop_loss', 'cancelled', 'manual', name='exitreasontype'), nullable=True),
@@ -119,7 +119,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['account_id'], ['accounts.id'], ),
     sa.ForeignKeyConstraint(['instrument_id'], ['instruments.id'], ),
     sa.ForeignKeyConstraint(['strategy_id'], ['strategies.id'], ),
-    sa.ForeignKeyConstraint(['symbol_id'], ['symbols.symbol'], ),
+    sa.ForeignKeyConstraint(['symbol_id'], ['symbols.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('trade_notes',
