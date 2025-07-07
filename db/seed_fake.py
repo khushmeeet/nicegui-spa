@@ -225,6 +225,79 @@ def random_entry_time(start_year=2021, end_year=2022):
     return start + timedelta(days=random_days, minutes=random_minutes)
 
 
+FOREX_PIP_VALUES_USD = {
+    "EURUSD": 10.0,
+    "USDJPY": 9.3,
+    "GBPUSD": 10.0,
+    "USDCHF": 10.2,
+    "AUDUSD": 10.0,
+    "NZDUSD": 10.0,
+    "USDCAD": 10.0,
+    "EURGBP": 12.0,
+    "EURJPY": 9.4,
+    "EURCHF": 10.1,
+    "EURAUD": 10.0,
+    "EURNZD": 10.0,
+    "EURCAD": 10.0,
+    "GBPJPY": 9.2,
+    "GBPCHF": 10.3,
+    "GBPAUD": 10.0,
+    "GBPNZD": 10.0,
+    "GBPCAD": 10.0,
+    "AUDJPY": 9.5,
+    "AUDCHF": 10.1,
+    "AUDNZD": 10.0,
+    "AUDCAD": 10.0,
+    "NZDJPY": 9.3,
+    "NZDCHF": 10.1,
+    "NZDCAD": 10.0,
+    "CADJPY": 9.2,
+    "CADCHF": 10.1,
+    "CHFJPY": 9.3,
+}
+
+FOREX_PIP_VALUES_GBP = {
+    "EURUSD": 7.90,
+    "USDJPY": 7.35,
+    "GBPUSD": 10.00,  # GBP is base currency here, 1 pip = £10
+    "USDCHF": 8.06,
+    "AUDUSD": 7.90,
+    "NZDUSD": 7.90,
+    "USDCAD": 7.90,
+    "EURGBP": 9.50,  # quoted in GBP
+    "EURJPY": 7.45,
+    "EURCHF": 7.95,
+    "EURAUD": 7.90,
+    "EURNZD": 7.90,
+    "EURCAD": 7.90,
+    "GBPJPY": 7.30,
+    "GBPCHF": 8.10,
+    "GBPAUD": 7.90,
+    "GBPNZD": 7.90,
+    "GBPCAD": 7.90,
+    "AUDJPY": 7.55,
+    "AUDCHF": 8.00,
+    "AUDNZD": 7.90,
+    "AUDCAD": 7.90,
+    "NZDJPY": 7.35,
+    "NZDCHF": 8.00,
+    "NZDCAD": 7.90,
+    "CADJPY": 7.30,
+    "CADCHF": 8.00,
+    "CHFJPY": 7.35,
+}
+
+
+def mock_pip_value_usd(symbol_name: str, lot_size: float) -> float:
+    base_value = FOREX_PIP_VALUES_USD.get(symbol_name.upper(), 10.0)
+    return round(base_value * lot_size, 2)
+
+
+def mock_pip_value_gbp(symbol_name: str, lot_size: float) -> float:
+    base_value = FOREX_PIP_VALUES_GBP.get(symbol_name.upper(), 7.90)
+    return round(base_value * lot_size, 2)
+
+
 def seed_trades(accounts, symbols, strategies):
     account = accounts[0]
     probability = rnd.choice(list(TradeSuccessProbabilityType))
@@ -240,7 +313,7 @@ def seed_trades(accounts, symbols, strategies):
         order_type = OrderType.market
 
     risk = 0.005
-    lots = 0.1
+    lots = 0.1  # compute accurate lot size
     if probability == TradeSuccessProbabilityType.low:
         risk = 0.005
         lots = 0.1
@@ -269,6 +342,7 @@ def seed_trades(accounts, symbols, strategies):
         stop_loss_price = round(entry_price + stop_loss_pips * 0.0001, 5)
         take_profit_price = round(entry_price - take_profit_pips * 0.0001, 5)
 
+    # add the chronological time here instead of random entry
     entry_time = random_entry_time(2021, 2024)
     duration = random_duration(min_minutes=30, max_minutes=2880)
     exit_time = entry_time + duration
@@ -305,6 +379,10 @@ def seed_trades(accounts, symbols, strategies):
             else:
                 exit_price = entry_price + (stop_loss_price - entry_price) * rnd.random()
             actual_reward_risk = take_profit_pips / math.abs(entry_price - exit_price)
+
+    if direction == DirectionType.long:
+        # compute pnl pips and then using pip value compute actual pnl
+        pass
 
 
 def seed_all():
