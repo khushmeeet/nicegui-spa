@@ -35,7 +35,8 @@ class Account(Base):
     platform = Column(SQLAlchemyEnum(PlatformType), nullable=False)
     path = Column(String, nullable=False)
     currency = Column(SQLAlchemyEnum(CurrencyType), nullable=True)
-    balance = Column(Float, nullable=True)
+    starting_balance = Column(Float, nullable=True)
+    current_balance = Column(Float, nullable=True)
 
     # Mt5 specific fields
     portable = Column(Boolean, nullable=False, default=True)

@@ -55,7 +55,8 @@ def seed_accounts(brokers: List[Broker], clear_existing: bool = True):
                 portable=True,
                 server="ICMarketsSC-Demo",
                 currency=CurrencyType.USD,
-                balance=10000,
+                starting_balance=10000,
+                current_balance=10000,
             ),
             Account(
                 name="Jane",
@@ -68,7 +69,8 @@ def seed_accounts(brokers: List[Broker], clear_existing: bool = True):
                 portable=True,
                 server="ICMarketsSC-Demo",
                 currency=CurrencyType.USD,
-                balance=15000,
+                starting_balance=15000,
+                current_balance=15000,
             ),
             Account(
                 name="John Spread Betting",
@@ -81,7 +83,8 @@ def seed_accounts(brokers: List[Broker], clear_existing: bool = True):
                 portable=True,
                 server="PepperstoneUK-Demo",
                 currency=CurrencyType.GBP,
-                balance=20000,
+                starting_balance=20000,
+                current_balance=20000,
             ),
             Account(
                 name="John Main",
@@ -94,7 +97,8 @@ def seed_accounts(brokers: List[Broker], clear_existing: bool = True):
                 portable=True,
                 server="ICMarketsSC-Live",
                 currency=CurrencyType.USD,
-                balance=25000,
+                starting_balance=25000,
+                current_balance=25000,
             ),
             Account(
                 name="Jane Main",
@@ -107,7 +111,8 @@ def seed_accounts(brokers: List[Broker], clear_existing: bool = True):
                 portable=True,
                 server="ICMarketsSC-Live",
                 currency=CurrencyType.USD,
-                balance=30000,
+                starting_balance=30000,
+                current_balance=30000,
             ),
             Account(
                 name="John Main Spread Betting",
@@ -120,7 +125,8 @@ def seed_accounts(brokers: List[Broker], clear_existing: bool = True):
                 portable=True,
                 server="PepperstoneUK-Live",
                 currency=CurrencyType.GBP,
-                balance=35000,
+                starting_balance=35000,
+                current_balance=35000,
             ),
         ]
 
@@ -288,134 +294,145 @@ FOREX_PIP_VALUES_GBP = {
 }
 
 
-def seed_trades(accounts, symbols, instruments, strategies):
+def seed_trades(symbols, strategies, clear_existing: bool = True):
     with get_session() as session:
-        account = session.query(Account).first()
+        accounts = session.query(Account).all()
+        entry_time = datetime(2021, 1, 1, 8, 0, 0)
+        NUM_TRADES = 500
 
-        balance = account.balance
-        currency = account.currency
+        if clear_existing:
+            session.query(Trade).delete()
+            session.commit()
 
-        probability = rnd.choice(list(TradeSuccessProbabilityType))
-        mindstate = rnd.choice(list(TradingMindState))
-        symbol_id = rnd.randint(1, len(symbols))
-        symbol = session.query(Symbol).filter_by(id=symbol_id).first()
-        # instrument = instruments.filter_by(symbol_id=symbol_id, account_id=account["id"]).first()
-        instrument = session.query(Instrument).filter_by(symbol_id=symbol_id, account_id=account.id).first()
-        strategy_id = rnd.randint(1, len(strategies))
-        strategy = strategies[strategy_id - 1]
-        status = TradeStatusType.active
-        direction = rnd.choice(list(DirectionType))
-        order_type = rnd.choice(list(OrderType))
-        if rnd.random() >= 0.65:
-            order_type = OrderType.market
+        for account in accounts:
+            balance = account.current_balance
+            currency = account.currency
+            trades = []
+            for i in range(NUM_TRADES):
+                probability = rnd.choice(list(TradeSuccessProbabilityType))
+                mindstate = rnd.choice(list(TradingMindState))
+                symbol_id = rnd.randint(1, len(symbols))
+                symbol = session.query(Symbol).filter_by(id=symbol_id).first()
+                instrument = session.query(Instrument).filter_by(symbol_id=symbol_id, account_id=account.id).first()
+                strategy_id = rnd.randint(1, len(strategies))
+                strategy = strategies[strategy_id - 1]
+                status = TradeStatusType.active
+                direction = rnd.choice(list(DirectionType))
+                order_type = rnd.choice(list(OrderType))
+                if rnd.random() >= 0.65:
+                    order_type = OrderType.market
 
-        risk = 0.005
-        if probability == TradeSuccessProbabilityType.low:
-            risk = 0.005
-            lots = 0.1
-            win_chance = 0.52
-        elif probability == TradeSuccessProbabilityType.medium:
-            risk = 0.0075
-            lots = 0.25
-            win_chance = 0.61
-        else:
-            risk = 0.01
-            lots = 0.5
-            win_chance = 0.72
-
-        pip_value = FOREX_PIP_VALUES_USD[symbol.symbol] if currency == CurrencyType.USD else FOREX_PIP_VALUES_GBP[symbol["symbol"]]
-
-        win_loss = 1 if rnd.random() <= win_chance else 0
-
-        pips = rnd.randint(15, 150)
-        rr = rnd.choice([1.0, 1.5, 2.0])
-        stop_loss_pips = pips
-        take_profit_pips = rr * stop_loss_pips
-        lots = round(balance * risk / (pip_value * stop_loss_pips), 2)
-
-        entry_price = round(1 + rnd.random(), 5)
-        if direction == DirectionType.long:
-            stop_loss_price = round(entry_price - stop_loss_pips * 0.0001, 5)
-            take_profit_price = round(entry_price + take_profit_pips * 0.0001, 5)
-        else:
-            stop_loss_price = round(entry_price + stop_loss_pips * 0.0001, 5)
-            take_profit_price = round(entry_price - take_profit_pips * 0.0001, 5)
-
-        # add the chronological time here instead of random entry
-        entry_time = random_entry_time(2021, 2024)
-        duration = random_duration(min_minutes=30, max_minutes=1440)
-        exit_time = entry_time + duration
-
-        reward_risk = take_profit_pips / stop_loss_pips
-
-        exit_price = None
-        exit_reason = None
-        if win_loss == 1:
-            exit_price = take_profit_price
-            exit_reason = ExitReasonType.take_profit
-        else:
-            exit_price = stop_loss_price
-            exit_reason = ExitReasonType.stop_loss
-
-        actual_reward_risk = reward_risk
-
-        if rnd.random() <= 0.02 and order_type != OrderType.market and status == TradeStatusType.pending:
-            exit_reason = ExitReasonType.cancelled
-            exit_price = None
-            actual_reward_risk = None
-
-        if rnd.random() <= 0.05:
-            exit_reason = ExitReasonType.manual
-            if win_loss == 1:
-                if direction == DirectionType.long:
-                    exit_price = entry_price + (take_profit_price - entry_price) * rnd.random()
+                risk = 0.005
+                if probability == TradeSuccessProbabilityType.low:
+                    risk = 0.005
+                    lots = 0.1
+                    win_chance = 0.52
+                elif probability == TradeSuccessProbabilityType.medium:
+                    risk = 0.0075
+                    lots = 0.25
+                    win_chance = 0.61
                 else:
-                    exit_price = entry_price - (entry_price - take_profit_price) * rnd.random()
-                actual_reward_risk = math.fabs(exit_price - entry_price) / stop_loss_pips
-            else:
+                    risk = 0.01
+                    lots = 0.5
+                    win_chance = 0.72
+
+                pip_value = FOREX_PIP_VALUES_USD[symbol.symbol] if currency == CurrencyType.USD else FOREX_PIP_VALUES_GBP[symbol.symbol]
+
+                win_loss = 1 if rnd.random() <= win_chance else 0
+
+                pips = rnd.randint(15, 150)
+                rr = rnd.choice([1.0, 1.5, 2.0])
+                stop_loss_pips = pips
+                take_profit_pips = rr * stop_loss_pips
+                lots = round(balance * risk / (pip_value * stop_loss_pips), 2)
+
+                entry_price = round(1 + rnd.random(), 5)
                 if direction == DirectionType.long:
-                    exit_price = entry_price - (entry_price - stop_loss_price) * rnd.random()
+                    stop_loss_price = round(entry_price - stop_loss_pips * 0.0001, 5)
+                    take_profit_price = round(entry_price + take_profit_pips * 0.0001, 5)
                 else:
-                    exit_price = entry_price + (stop_loss_price - entry_price) * rnd.random()
-                actual_reward_risk = take_profit_pips / math.fabs(entry_price - exit_price)
+                    stop_loss_price = round(entry_price + stop_loss_pips * 0.0001, 5)
+                    take_profit_price = round(entry_price - take_profit_pips * 0.0001, 5)
 
-        if direction == DirectionType.long:
-            pnl_pips = (exit_price - entry_price) / 0.0001
-        else:
-            pnl_pips = (entry_price - exit_price) / 0.0001
-        actual_reward_risk = pnl_pips / stop_loss_pips
-        actual_pnl = pnl_pips * lots * pip_value
+                duration = random_duration(min_minutes=30, max_minutes=1440)
+                exit_time = entry_time + duration
 
-        trade = Trade(
-            trade_id=1,
-            account=account,
-            symbol=symbol,
-            instrument=instrument,
-            strategy=strategy,
-            status=status,
-            risk=risk,
-            direction=direction,
-            order_type=order_type,
-            lots=lots,
-            units=lots * 100_000,
-            entry_price=entry_price,
-            stop_loss_pips=stop_loss_pips,
-            take_profit_pips=take_profit_pips,
-            take_profit_price=take_profit_price,
-            stop_loss_price=stop_loss_price,
-            open_time=entry_time,
-            exit_time=exit_time,
-            exit_price=exit_price,
-            probability=probability,
-            mindstate=mindstate,
-            duration=duration,
-            reward_risk=reward_risk,
-            exit_reason=exit_reason,
-            actual_pnl=actual_pnl,
-            actual_reward_risk=actual_reward_risk,
-        )
-        session.add(trade)
-        session.commit()
+                reward_risk = take_profit_pips / stop_loss_pips
+
+                exit_price = None
+                exit_reason = None
+                if win_loss == 1:
+                    exit_price = take_profit_price
+                    exit_reason = ExitReasonType.take_profit
+                else:
+                    exit_price = stop_loss_price
+                    exit_reason = ExitReasonType.stop_loss
+
+                actual_reward_risk = reward_risk
+
+                if rnd.random() <= 0.02 and order_type != OrderType.market and status == TradeStatusType.pending:
+                    exit_reason = ExitReasonType.cancelled
+                    exit_price = None
+                    actual_reward_risk = None
+
+                if rnd.random() <= 0.05:
+                    exit_reason = ExitReasonType.manual
+                    if win_loss == 1:
+                        if direction == DirectionType.long:
+                            exit_price = entry_price + (take_profit_price - entry_price) * rnd.random()
+                        else:
+                            exit_price = entry_price - (entry_price - take_profit_price) * rnd.random()
+                        actual_reward_risk = math.fabs(exit_price - entry_price) / stop_loss_pips
+                    else:
+                        if direction == DirectionType.long:
+                            exit_price = entry_price - (entry_price - stop_loss_price) * rnd.random()
+                        else:
+                            exit_price = entry_price + (stop_loss_price - entry_price) * rnd.random()
+                        actual_reward_risk = take_profit_pips / math.fabs(entry_price - exit_price)
+
+                if direction == DirectionType.long:
+                    pnl_pips = (exit_price - entry_price) / 0.0001
+                else:
+                    pnl_pips = (entry_price - exit_price) / 0.0001
+                actual_reward_risk = round(pnl_pips / stop_loss_pips, 2)
+                actual_pnl = round(pnl_pips * lots * pip_value, 4)
+
+                trade = Trade(
+                    trade_id=i,
+                    account=account,
+                    symbol=symbol,
+                    instrument=instrument,
+                    strategy=strategy,
+                    status=status,
+                    risk=risk,
+                    direction=direction,
+                    order_type=order_type,
+                    lots=lots,
+                    units=lots * 100_000,
+                    entry_price=entry_price,
+                    stop_loss_pips=stop_loss_pips,
+                    take_profit_pips=take_profit_pips,
+                    take_profit_price=take_profit_price,
+                    stop_loss_price=stop_loss_price,
+                    open_time=entry_time,
+                    exit_time=exit_time,
+                    exit_price=exit_price,
+                    probability=probability,
+                    mindstate=mindstate,
+                    duration=duration,
+                    reward_risk=reward_risk,
+                    exit_reason=exit_reason,
+                    actual_pnl=actual_pnl,
+                    actual_reward_risk=actual_reward_risk,
+                )
+                session.add(trade)
+                balance += actual_pnl
+                entry_time = exit_time + random_duration(min_minutes=60, max_minutes=720)
+
+            account.current_balance = round(balance, 4)
+            session.add(account)
+            session.commit()
+            break
         print("Trade seeded successfully.")
     return trade
 
@@ -426,7 +443,7 @@ def seed_all():
     symbols = seed_symbols()
     instruments = seed_instruments(accounts)
     strategies = seed_strategies()
-    seed_trades(accounts, symbols, instruments, strategies)
+    seed_trades(symbols, strategies)
     return brokers, accounts, symbols, instruments, strategies
 
 

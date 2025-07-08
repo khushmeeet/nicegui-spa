@@ -21,7 +21,7 @@ def get_all_items_from_account() -> pd.DataFrame:
                 Account.portable,
                 Account.server,
                 Account.currency,
-                Account.balance,
+                Account.starting_balance,
                 Account.archived,
                 Broker.name.label("broker"),
                 func.count(Instrument.id).label("instrument_count"),
