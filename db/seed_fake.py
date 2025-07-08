@@ -432,7 +432,6 @@ def seed_trades(symbols, strategies, clear_existing: bool = True):
             account.current_balance = round(balance, 4)
             session.add(account)
             session.commit()
-            break
         print("Trade seeded successfully.")
     return trade
 
