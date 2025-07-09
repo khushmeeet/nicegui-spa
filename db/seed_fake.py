@@ -427,6 +427,8 @@ def seed_trades(symbols, strategies, clear_existing: bool = True):
                     exit_reason=exit_reason,
                     actual_pnl=actual_pnl,
                     actual_reward_risk=actual_reward_risk,
+                    starting_balance=balance,
+                    ending_balance=balance + actual_pnl,
                 )
                 session.add(trade)
                 balance += actual_pnl

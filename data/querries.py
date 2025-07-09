@@ -41,6 +41,8 @@ def get_all_items_from_trade() -> pd.DataFrame:
                     "symbol": t.symbol.id,
                     "instrument": t.instrument.id,
                     "strategy": t.strategy.name if t.strategy else None,
+                    "starting_balance": t.starting_balance,
+                    "ending_balance": t.ending_balance,
                 }
             )
 

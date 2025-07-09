@@ -66,6 +66,8 @@ class Trade(Base):
 
     actual_pnl = Column(Float, nullable=True)
     actual_reward_risk = Column(Float, nullable=True)
+    starting_balance = Column(Float, nullable=True)
+    ending_balance = Column(Float, nullable=True)
     validated_from_backtest = Column(Boolean, nullable=False, default=False)
 
     # ids returned by the MT5 or CT5

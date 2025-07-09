@@ -30,12 +30,29 @@ def accounts():
             acc_name = account["Name"]
             a1_df = trades_df[trades_df["account_name"] == acc_name].copy()
             a1_df_sorted = a1_df.sort_values(by=["exit_time"])
-            a1_df_sorted["cum_bal"] = account["Starting Balance"] + a1_df_sorted["actual_pnl"].cumsum()
-            series = [[x.timestamp() * 1000, y] for x, y in zip(a1_df_sorted["exit_time"], a1_df_sorted["cum_bal"])]
+            series = [[x.timestamp() * 1000, y] for x, y in zip(a1_df_sorted["exit_time"], a1_df_sorted["ending_balance"])]
             all_series.append({"name": acc_name, "data": series})
         return all_series
 
     with ui.column().classes("w-full h-full text-lg"):
+
+        def on_toggle(e):
+            mode = e.value
+            chart.options["plotOptions"]["series"]["compare"] = mode.lower() if mode == "Percent" else None
+            if mode == "Percent":
+                chart.options["yAxis"]["labels"]["format"] = "{value}%"
+                chart.options["tooltip"]["pointFormat"] = '<span style="color:{series.color}">{series.name}</span>: {point.change:.1f}%<br/>'
+            else:
+                chart.options["yAxis"]["labels"]["format"] = None
+                chart.options["tooltip"]["pointFormat"] = '<span style="color:{series.color}">{series.name}</span>: {point.y:.2f}<br/>'
+            chart.update()
+            chart.run_method("chart.yAxis[0].update", {"labels": chart.options["yAxis"]["labels"]})
+            chart.run_method("chart.yAxis[0].setExtremes", [None, None])
+            chart.run_method("chart.reflow")
+
+        with ui.row().classes("w-full justify-between"):
+            ui.label("Equity Curve").classes("text-2xl")
+            ui.toggle(["Value", "Percent"], value="Value", on_change=on_toggle)
 
         chart = (
             ui.highchart(
@@ -46,14 +63,8 @@ def accounts():
                     "title": {"text": None},
                     "series": get_all_account_balance_series(),
                     "xAxis": {"type": "datetime", "labels": {"format": "{value:%d %b %Y}"}, "title": None},
-                    "yAxis": {
-                        "title": None,
-                    },
-                    "legend": {
-                        "layout": "vertical",
-                        "align": "right",
-                        "verticalAlign": "top",
-                    },
+                    "yAxis": {"title": None, "labels": {"format": None}},
+                    "legend": {"enabled": True, "layout": "vertical", "align": "right", "verticalAlign": "top"},
                     "plotOptions": {
                         "series": {
                             "marker": {"enabled": False},
@@ -61,24 +72,30 @@ def accounts():
                         }
                     },
                     "rangeSelector": {
-                        "allButtonsEnabled": True,
+                        "selected": 7,
                         "buttons": [
-                            {"type": "month", "count": 3, "text": "Day", "dataGrouping": {"forced": True, "units": [["day", [1]]]}},
-                            {"type": "year", "count": 1, "text": "Week", "dataGrouping": {"forced": True, "units": [["week", [1]]]}},
-                            {"type": "all", "text": "Month", "count": 1, "dataGrouping": {"forced": True, "units": [["month", [1]]]}},
+                            {"type": "day", "count": 1, "text": "1d", "title": "View 1 day"},
+                            {"type": "day", "count": 3, "text": "3d", "title": "View 3 days"},
+                            {"type": "week", "count": 1, "text": "1w", "title": "View 1 week"},
+                            {"type": "month", "count": 1, "text": "1m", "title": "View 1 month"},
+                            {"type": "month", "count": 2, "text": "2m", "title": "View 2 months"},
+                            {"type": "month", "count": 3, "text": "3m", "title": "View 3 months"},
+                            {"type": "month", "count": 6, "text": "6m", "title": "View 6 months"},
+                            {"type": "ytd", "text": "YTD", "title": "View year to date"},
+                            {"type": "year", "count": 1, "text": "1y", "title": "View 1 year"},
+                            {"type": "year", "count": 2, "text": "2y", "title": "View 2 years"},
+                            {"type": "all", "text": "All", "title": "View all"},
                         ],
-                        "buttonTheme": {"width": 60},
-                        "inputStyle": {"color": "#CED5DF"},
-                        "selected": 0,
                     },
-                    "navigator": {"enabled": True},
+                    "navigator": {"enabled": False},
+                    "tooltip": {"pointFormat": '<span style="color:{series.color}">{series.name}</span>: {point.y:.2f}<br/>'},
                 },
             )
             .classes("w-full")
-            .style("height: 640px")
+            .style("height: 480px")
         )
 
-        # update_chart(type("Event", (), {"value": toggle1.value})())
+        # ui.timer(0.1, lambda: (chart.run_method("chart.yAxis[0].setExtremes", [None, None]), chart.run_method("chart.reflow")), once=True)
 
         aggrid_options = {
             "columnDefs": [
@@ -96,19 +113,59 @@ def accounts():
 
         ui.separator()
 
-        ui.button("Add Account", icon="add", on_click=lambda: right_drawer.toggle())
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label("Accounts Summary").classes("text-2xl")
+            ui.button("Add Account", icon="add", on_click=lambda: right_drawer.toggle())
         ui.aggrid.from_pandas(accounts_df, options=aggrid_options).classes("max-h-128")
 
         ui.space()
-        ui.highchart(
-            {
-                "title": {"text": None},
-                "chart": {"type": "column"},
-                "xAxis": {"categories": ["USA", "China", "Brazil", "EU", "Argentina", "India"], "crosshair": True, "accessibility": {"description": "Countries"}},
-                "yAxis": {"min": 0, "title": {"text": "1000 metric tons (MT)"}},
-                "series": [{"name": "Corn", "data": [387749, 280000, 129000, 64300, 54000, 34300]}],
-            }
-        ).classes("w-full h-64")
+        content = ["Monthly Growth", "Profit Heatmap", "Drawdown Curve"]
+        with ui.tabs() as tabs:
+            for title in content:
+                ui.tab(title)
+        with ui.tab_panels(tabs, value=content[1]).classes("w-full") as panels:
+            with ui.tab_panel(content[0]):
+                ui.highchart(
+                    {
+                        "title": {"text": None},
+                        "chart": {"type": "column"},
+                        "xAxis": {"categories": ["USA", "China", "Brazil", "EU", "Argentina", "India"], "crosshair": True, "accessibility": {"description": "Countries"}},
+                        "yAxis": {"min": 0, "title": {"text": "1000 metric tons (MT)"}},
+                        "series": [{"name": "Corn", "data": [387749, 280000, 129000, 64300, 54000, 34300]}],
+                    }
+                ).classes("w-full h-64")
+            with ui.tab_panel(content[1]):
+                df_to_use = trades_df[trades_df["account_name"] == accounts_df["Name"].iloc[0]].copy()
+                a1_df_sorted = df_to_use.sort_values(by=["exit_time"], ascending=True)
+
+                ui.echart(
+                    {
+                        "series": {
+                            "type": "heatmap",
+                            "coordinateSystem": "calendar",
+                            "calendarIndex": 0,
+                            "data": [[str(x), y] for x, y in zip(a1_df_sorted["exit_time"], a1_df_sorted["actual_pnl"])],
+                        },
+                        "calendar": {
+                            "top": 80,
+                            # "left": 30,
+                            # "right": 30,
+                            "cellSize": ["auto", 13],
+                            "range": "2025",
+                            "itemStyle": {"borderWidth": 0.5},
+                            "yearLabel": {"show": False},
+                        },
+                        "tooltip": {"position": "top"},
+                        "visualMap": {
+                            "min": a1_df_sorted["actual_pnl"].min(),
+                            "max": a1_df_sorted["actual_pnl"].max(),
+                            "calculable": True,
+                            "orient": "horizontal",
+                            "left": "center",
+                            "top": "top",
+                        },
+                    }
+                ).style("width: 960px")
 
         if right_drawer and right_drawer_rendered_by != "accounts":
             app.storage.client["right_drawer_rendered_by"] = "accounts"

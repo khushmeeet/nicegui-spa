@@ -1,15 +1,15 @@
 """Add tables
 
-Revision ID: 988810850a5b
+Revision ID: a54e8b183bd9
 Revises: 
-Create Date: 2025-07-08 18:39:23.396762
+Create Date: 2025-07-09 18:48:19.116425
 
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '988810850a5b'
+revision = 'a54e8b183bd9'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -116,6 +116,8 @@ def upgrade():
     sa.Column('exit_reason_details', sa.String(), nullable=True),
     sa.Column('actual_pnl', sa.Float(), nullable=True),
     sa.Column('actual_reward_risk', sa.Float(), nullable=True),
+    sa.Column('starting_balance', sa.Float(), nullable=True),
+    sa.Column('ending_balance', sa.Float(), nullable=True),
     sa.Column('validated_from_backtest', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['account_id'], ['accounts.id'], ),
     sa.ForeignKeyConstraint(['instrument_id'], ['instruments.id'], ),
