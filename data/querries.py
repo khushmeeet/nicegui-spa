@@ -89,8 +89,8 @@ def get_all_items_from_account() -> pd.DataFrame:
                     "Server": acc.server,
                     "Path": acc.path,
                     "Instruments #": acc.instrument_count,
-                    "Starting Balance": acc.starting_balance,
-                    "Current Balance": acc.current_balance,
+                    "Starting Balance": round(acc.starting_balance, 2),
+                    "Current Balance": round(acc.current_balance, 2),
                     "Archived": acc.archived,
                 }
             )
