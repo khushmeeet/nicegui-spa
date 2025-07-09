@@ -297,7 +297,6 @@ FOREX_PIP_VALUES_GBP = {
 def seed_trades(symbols, strategies, clear_existing: bool = True):
     with get_session() as session:
         accounts = session.query(Account).all()
-        entry_time = datetime(2021, 1, 1, 8, 0, 0)
         NUM_TRADES = 500
 
         if clear_existing:
@@ -307,8 +306,12 @@ def seed_trades(symbols, strategies, clear_existing: bool = True):
         for account in accounts:
             balance = account.current_balance
             currency = account.currency
+            entry_time = datetime(2024, 1, 1, 8, 0, 0)
+            exit_time = entry_time
             trades = []
-            for i in range(NUM_TRADES):
+            i = 0
+            while exit_time < datetime.now():
+                i += 1
                 probability = rnd.choice(list(TradeSuccessProbabilityType))
                 mindstate = rnd.choice(list(TradingMindState))
                 symbol_id = rnd.randint(1, len(symbols))
@@ -330,11 +333,11 @@ def seed_trades(symbols, strategies, clear_existing: bool = True):
                 elif probability == TradeSuccessProbabilityType.medium:
                     risk = 0.0075
                     lots = 0.25
-                    win_chance = 0.61
+                    win_chance = 0.51
                 else:
                     risk = 0.01
                     lots = 0.5
-                    win_chance = 0.72
+                    win_chance = 0.53
 
                 pip_value = FOREX_PIP_VALUES_USD[symbol.symbol] if currency == CurrencyType.USD else FOREX_PIP_VALUES_GBP[symbol.symbol]
 

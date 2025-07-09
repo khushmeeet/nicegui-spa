@@ -1,10 +1,52 @@
-from typing import List
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+
 import pandas as pd
 from sqlalchemy import func
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
-from models import Account, Broker, Instrument
+from models import Account, Broker, Instrument, Trade
 from db.get_session import get_session
 from utils.case_converter import snake_to_title
+
+
+def get_all_items_from_trade() -> pd.DataFrame:
+    with get_session() as session:
+        stmt = select(Trade).options(joinedload(Trade.account), joinedload(Trade.symbol), joinedload(Trade.instrument), joinedload(Trade.strategy))
+        result = session.execute(stmt)
+        trades = result.scalars().all()
+        trade_dicts = []
+        for t in trades:
+            trade_dicts.append(
+                {
+                    "id": t.id,
+                    "trade_id": t.trade_id,
+                    "status": t.status.name,
+                    "risk": t.risk,
+                    "direction": t.direction.name,
+                    "order_type": t.order_type.name,
+                    "lots": t.lots,
+                    "entry_price": t.entry_price,
+                    "exit_price": t.exit_price,
+                    "open_time": t.open_time,
+                    "exit_time": t.exit_time,
+                    "duration": t.duration.total_seconds() if t.duration else None,
+                    "actual_pnl": t.actual_pnl,
+                    "account_name": t.account.name if t.account else None,
+                    "account_broker": t.account.broker if t.account else None,
+                    "symbol": t.symbol.id,
+                    "instrument": t.instrument.id,
+                    "strategy": t.strategy.name if t.strategy else None,
+                }
+            )
+
+        df = pd.DataFrame(trade_dicts)
+        df.set_index("id", inplace=True)
+        return df
 
 
 def get_all_items_from_account() -> pd.DataFrame:
@@ -22,6 +64,7 @@ def get_all_items_from_account() -> pd.DataFrame:
                 Account.server,
                 Account.currency,
                 Account.starting_balance,
+                Account.current_balance,
                 Account.archived,
                 Broker.name.label("broker"),
                 func.count(Instrument.id).label("instrument_count"),
@@ -44,7 +87,8 @@ def get_all_items_from_account() -> pd.DataFrame:
                     "Server": acc.server,
                     "Path": acc.path,
                     "Instruments #": acc.instrument_count,
-                    "Balance": acc.balance,
+                    "Starting Balance": acc.starting_balance,
+                    "Current Balance": acc.current_balance,
                     "Archived": acc.archived,
                 }
             )
@@ -74,3 +118,8 @@ def get_all_items_from_table(table, fields) -> pd.DataFrame:
         except KeyError:
             pass
         return df
+
+
+if __name__ == "__main__":
+    df = get_all_items_from_account()
+    print(df.head())

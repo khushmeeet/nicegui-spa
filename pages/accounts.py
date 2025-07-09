@@ -1,34 +1,85 @@
 from nicegui import ui, app
+from datetime import datetime, timedelta
+
+
+def filter_dates(period):
+    now = datetime.now()
+    if period == "1D":
+        return now - timedelta(days=1)
+    elif period == "1M":
+        return now - timedelta(days=30)
+    elif period == "1Y":
+        return now - timedelta(days=365)
+    elif period == "YTD":
+        return datetime(now.year, 1, 1)
+    elif period == "All":
+        return None  # No filtering
+    else:
+        return None
 
 
 def accounts():
     right_drawer: ui.right_drawer = app.storage.client["right_drawer"]
     right_drawer_rendered_by = app.storage.client["right_drawer_rendered_by"]
     accounts_df = app.storage.client["accounts_df"]
+    trades_df = app.storage.client["trades_df"]
+
+    def get_all_account_balance_series():
+        all_series = []
+        for _, account in accounts_df.iterrows():
+            acc_name = account["Name"]
+            a1_df = trades_df[trades_df["account_name"] == acc_name].copy()
+            a1_df_sorted = a1_df.sort_values(by=["exit_time"])
+            a1_df_sorted["cum_bal"] = account["Starting Balance"] + a1_df_sorted["actual_pnl"].cumsum()
+            series = [[x.timestamp() * 1000, y] for x, y in zip(a1_df_sorted["exit_time"], a1_df_sorted["cum_bal"])]
+            all_series.append({"name": acc_name, "data": series})
+        return all_series
 
     with ui.column().classes("w-full h-full text-lg"):
-        ui.markdown("## 💼 Accounts")
-        ui.label("Your accounts summary")
 
-        ui.highchart(
-            {
-                "title": False,
-                "plotOptions": {
-                    "series": {
-                        "stickyTracking": False,
-                        "dragDrop": {"draggableY": True, "dragPrecisionY": 1},
+        chart = (
+            ui.highchart(
+                type="stockChart",
+                extras=["stock"],
+                options={
+                    "chart": {"type": "line"},
+                    "title": {"text": None},
+                    "series": get_all_account_balance_series(),
+                    "xAxis": {"type": "datetime", "labels": {"format": "{value:%d %b %Y}"}, "title": None},
+                    "yAxis": {
+                        "title": None,
                     },
+                    "legend": {
+                        "layout": "vertical",
+                        "align": "right",
+                        "verticalAlign": "top",
+                    },
+                    "plotOptions": {
+                        "series": {
+                            "marker": {"enabled": False},
+                            "states": {"hover": {"enabled": True}},
+                        }
+                    },
+                    "rangeSelector": {
+                        "allButtonsEnabled": True,
+                        "buttons": [
+                            {"type": "month", "count": 3, "text": "Day", "dataGrouping": {"forced": True, "units": [["day", [1]]]}},
+                            {"type": "year", "count": 1, "text": "Week", "dataGrouping": {"forced": True, "units": [["week", [1]]]}},
+                            {"type": "all", "text": "Month", "count": 1, "dataGrouping": {"forced": True, "units": [["month", [1]]]}},
+                        ],
+                        "buttonTheme": {"width": 60},
+                        "inputStyle": {"color": "#CED5DF"},
+                        "selected": 0,
+                    },
+                    "navigator": {"enabled": True},
                 },
-                "series": [
-                    {"name": "A", "data": [[20, 10], [30, 20], [40, 30]]},
-                    {"name": "B", "data": [[50, 40], [60, 50], [70, 60]]},
-                ],
-            },
-            extras=["draggable-points"],
-            on_point_click=lambda e: ui.notify(f"Click: {e}"),
-            on_point_drag_start=lambda e: ui.notify(f"Drag start: {e}"),
-            on_point_drop=lambda e: ui.notify(f"Drop: {e}"),
-        ).classes("w-full h-128")
+            )
+            .classes("w-full")
+            .style("height: 640px")
+        )
+
+        # update_chart(type("Event", (), {"value": toggle1.value})())
+
         aggrid_options = {
             "columnDefs": [
                 {"headerName": "Name", "field": "Name", "filter": "agTextColumnFilter", "floatingFilter": True},
@@ -37,8 +88,9 @@ def accounts():
                 {"headerName": "Login", "field": "Login", "filter": "agTextColumnFilter", "floatingFilter": True},
                 {"headerName": "Platform", "field": "Platform", "filter": "agTextColumnFilter", "floatingFilter": True},
                 {"headerName": "Server", "field": "Server", "filter": "agTextColumnFilter", "floatingFilter": True},
-                # {"headerName": "Currency", "field": "currency"},
-                # {"headerName": "Balance", "field": "balance"},
+                {"headerName": "Currency", "field": "Currency", "filter": "agTextColumnFilter", "floatingFilter": True},
+                {"headerName": "Starting Balance", "field": "Starting Balance", "filter": "agTextColumnFilter", "floatingFilter": True},
+                {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "floatingFilter": True},
             ]
         }
 
@@ -46,6 +98,17 @@ def accounts():
 
         ui.button("Add Account", icon="add", on_click=lambda: right_drawer.toggle())
         ui.aggrid.from_pandas(accounts_df, options=aggrid_options).classes("max-h-128")
+
+        ui.space()
+        ui.highchart(
+            {
+                "title": {"text": None},
+                "chart": {"type": "column"},
+                "xAxis": {"categories": ["USA", "China", "Brazil", "EU", "Argentina", "India"], "crosshair": True, "accessibility": {"description": "Countries"}},
+                "yAxis": {"min": 0, "title": {"text": "1000 metric tons (MT)"}},
+                "series": [{"name": "Corn", "data": [387749, 280000, 129000, 64300, 54000, 34300]}],
+            }
+        ).classes("w-full h-64")
 
         if right_drawer and right_drawer_rendered_by != "accounts":
             app.storage.client["right_drawer_rendered_by"] = "accounts"
