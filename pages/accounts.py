@@ -1,60 +1,30 @@
 import pandas as pd
 from nicegui import ui, app
+from datetime import datetime
+
+from data.services import get_all_account_balance_series, get_account_monthly_gain_data
 
 
 def accounts():
     right_drawer: ui.right_drawer = app.storage.client["right_drawer"]
     right_drawer_rendered_by = app.storage.client["right_drawer_rendered_by"]
     accounts_df = app.storage.client["accounts_df"]
+    accounts_df["selected"] = False
+    accounts_df.loc[1, "selected"] = True
     trades_df = app.storage.client["trades_df"]
+    trades_df["year"] = trades_df["exit_time"].dt.year
+    available_years = sorted(trades_df["year"].unique(), reverse=True)
+    state = {
+        "account_selected": accounts_df["Name"].iloc[0],
+    }
 
-    def get_all_account_balance_series():
-        print(2)
-        all_series = []
-        for _, account in accounts_df.iterrows():
-            acc_name = account["Name"]
-            a1_df = trades_df[trades_df["account_name"] == acc_name].copy()
-            a1_df_sorted = a1_df.sort_values(by=["exit_time"])
-            series = [[x.timestamp() * 1000, y] for x, y in zip(a1_df_sorted["exit_time"], a1_df_sorted["ending_balance"])]
-            all_series.append({"name": acc_name, "data": series})
-        return all_series
-
-    def get_monthly_gain_data():
-        print(1)
-        df = app.storage.client["trades_df"]
-        df = trades_df.copy()
-        df["exit_time"] = pd.to_datetime(df["exit_time"])
-
-        # Filter for last 12 months
-        today = pd.Timestamp.today().normalize()
-        start_date = today - pd.DateOffset(months=12)
-        df = df[df["exit_time"] >= start_date]
-
-        # Add "month" column
-        df["month"] = df["exit_time"].dt.to_period("M")
-
-        # Group by month and sum actual PnL
-        monthly_pnl = df.groupby("month")["actual_pnl"].sum()
-
-        # Create cumulative starting balances for % change (approximation)
-        monthly_balance = df.groupby("month")[["starting_balance", "ending_balance"]].agg("last")
-
-        # Prepare final result
-        monthly_data = []
-        for month in monthly_pnl.index:
-            label = month.strftime("%b-%Y")
-            value = monthly_pnl[month]
-            starting = monthly_balance.loc[month, "starting_balance"]
-            ending = monthly_balance.loc[month, "ending_balance"]
-            pct = ((ending - starting) / starting * 100) if starting else 0
-
-            monthly_data.append({"month": label, "gain": round(value, 2), "percent": round(pct, 2)})
-
-        return monthly_data
+    def update_state(**kwargs):
+        for k, v in kwargs.items():
+            state[k] = v
 
     with ui.column().classes("w-full h-full text-lg"):
 
-        def on_toggle(e):
+        def on_equity_curve_percent_value_toggle(e):
             mode = e.value
             chart.options["plotOptions"]["series"]["compare"] = mode.lower() if mode == "Percent" else None
             if mode == "Percent":
@@ -65,9 +35,29 @@ def accounts():
                 chart.options["tooltip"]["pointFormat"] = '<span style="color:{series.color}">{series.name}</span>: {point.y:.2f}<br/>'
             chart.update()
 
+        def update_bar_chart():
+            series, categories = get_account_monthly_gain_data(state["account_selected"], range_selector_1.value, mode_selector_1.value, trades_df)
+            bar_chart.options["series"] = [series] if series else []
+            bar_chart.options["xAxis"]["categories"] = categories
+            bar_chart.options["yAxis"]["labels"]["format"] = "{value}%" if mode_selector_1.value == "Percent" else None
+            bar_chart.options["plotOptions"]["column"]["dataLabels"]["format"] = "{point.y:.2f}%" if mode_selector_1.value == "Percent" else None
+            bar_chart.update()
+
+        def update_heatmap():
+            heatmap.options["calendar"]["range"] = range_selector_1.value if range_selector_1.value in [str(x) for x in available_years] else available_years[0]
+            heatmap.update()
+
+        def on_account_selected(e):
+            update_state(account_selected=e.args["data"]["Name"])
+            update_bar_chart()
+
+        def update_account_charts(e):
+            update_bar_chart()
+            update_heatmap()
+
         with ui.row().classes("w-full justify-between"):
             ui.label("Equity Curve").classes("text-2xl")
-            ui.toggle(["Value", "Percent"], value="Value", on_change=on_toggle)
+            ui.toggle(["Value", "Percent"], value="Value", on_change=on_equity_curve_percent_value_toggle)
 
         chart = ui.highchart(
             type="stockChart",
@@ -75,7 +65,7 @@ def accounts():
             options={
                 "chart": {"type": "line", "spacingRight": 30},
                 "title": {"text": None},
-                "series": get_all_account_balance_series(),
+                "series": get_all_account_balance_series(accounts_df, trades_df),
                 "xAxis": {"type": "datetime", "labels": {"format": "{value:%d %b %Y}"}, "title": None},
                 "yAxis": {"title": None, "labels": {"format": None, "x": 30}},
                 "legend": {"enabled": True, "layout": "horizontal", "align": "center", "verticalAlign": "bottom"},
@@ -98,106 +88,106 @@ def accounts():
             },
         ).classes("w-full h-[540px]")
 
-        # ui.timer(0.1, lambda: (chart.run_method("chart.yAxis[0].setExtremes", [None, None]), chart.run_method("chart.reflow")), once=True)
-
-        aggrid_options = {
-            "domLayout": "autoHeight",
-            "suppressHorizontalScroll": False,
-            "ensureDomOrder": True,
-            "defaultColDef": {"resizable": True},
-            "rowSelection": "single",
-            "suppressRowClickSelection": False,
-            "minWidth": 800,
-            "columnDefs": [
-                {"headerName": "", "checkboxSelection": True, "width": 40, "headerCheckboxSelection": True, "resizable": False},
-                {"headerName": "Name", "field": "Name", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
-                {"headerName": "Broker", "field": "Broker", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 150, "minWidth": 100},
-                {"headerName": "Type", "field": "Type", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                {"headerName": "Login", "field": "Login", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                {"headerName": "Platform", "field": "Platform", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                {"headerName": "Server", "field": "Server", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
-                {"headerName": "Path", "field": "Path", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
-                {"headerName": "Currency", "field": "Currency", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                {"headerName": "Starting Balance", "field": "Starting Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
-                {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
-            ],
-        }
-
         with ui.row().classes("w-full items-center justify-between"):
             ui.label("Accounts Summary").classes("text-2xl")
             ui.button("Add Account", icon="add", on_click=lambda: right_drawer.toggle())
 
-        ui.aggrid.from_pandas(accounts_df, options=aggrid_options).classes("max-h-128")
+        grid = (
+            ui.aggrid.from_pandas(
+                accounts_df,
+                options={
+                    "domLayout": "autoHeight",
+                    "suppressHorizontalScroll": False,
+                    "ensureDomOrder": True,
+                    "defaultColDef": {"resizable": True},
+                    "rowSelection": "single",
+                    "suppressRowClickSelection": False,
+                    "minWidth": 800,
+                    "columnDefs": [
+                        {"headerName": "Name", "field": "Name", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
+                        {"headerName": "Broker", "field": "Broker", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 150, "minWidth": 100},
+                        {"headerName": "Type", "field": "Type", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
+                        {"headerName": "Login", "field": "Login", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
+                        {"headerName": "Platform", "field": "Platform", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
+                        {"headerName": "Server", "field": "Server", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
+                        {"headerName": "Path", "field": "Path", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
+                        {"headerName": "Currency", "field": "Currency", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
+                        {"headerName": "Starting Balance", "field": "Starting Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
+                        {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
+                    ],
+                    "initialState": {"rowSelection": ["0"]},
+                },
+            )
+            .on("cellClicked", lambda e: on_account_selected(e))
+            .classes("max-h-128")
+        )
 
-        content = ["Monthly Growth", "Profit Heatmap", "Drawdown Curve"]
+        with ui.row().classes("w-full items-center justify-between pr-1"):
+            range_selector_1 = ui.toggle(options=["YTD", "1 Year"] + [str(year) for year in available_years], value="1 Year").on_value_change(update_account_charts)
+            mode_selector_1 = ui.toggle(["Value", "Percent"], value="Percent").on_value_change(update_account_charts)
+
+        tab_content = ["Monthly Growth", "Profit Heatmap", "Drawdown Curve"]
         with ui.tabs() as tabs:
-            for title in content:
+            for title in tab_content:
                 ui.tab(title)
-        with ui.tab_panels(tabs, value=content[0]).classes("w-full p-0") as panels:
-            with ui.tab_panel(content[0]).classes("p-0"):
-                monthly_data = get_monthly_gain_data()
+            tab_label = ui.label().bind_text_from(tabs, "value")
 
-                categories = [item["month"] for item in monthly_data]
-                absolute_gains = [item["gain"] for item in monthly_data]
-                percent_gains = [item["percent"] for item in monthly_data]
-
-                with ui.row().classes("w-full items-center justify-between"):
-                    with ui.row():
-                        acc = ui.select(options=accounts_df["Name"].tolist(), value=accounts_df["Name"].tolist()[0], label="Account").classes("w-64")
-                        data = ui.select(options=["Last 1 year", 2025, 2024], value="Last 1 year", label="Time period").classes("w-64")
-                    toggle = ui.toggle(["Value", "Percent"], value="Percent")
-
-                ui.highchart(
+        with ui.tab_panels(tabs, value=tab_content[0]).classes("w-full p-0 h-128 h-full"):
+            with ui.tab_panel(tab_content[0]).classes("p-0 h-128 h-full"):
+                series, categories = get_account_monthly_gain_data(state["account_selected"], range_selector_1.value, mode_selector_1.value, trades_df)
+                bar_chart = ui.highchart(
                     {
                         "chart": {"type": "column"},
                         "title": {"text": None},
-                        "xAxis": {
-                            "categories": categories,
-                            "crosshair": True,
+                        "xAxis": {"categories": categories},
+                        "yAxis": {"title": {"text": None}, "labels": {"format": "{value}%"}},
+                        "tooltip": {"enabled": False},
+                        "legend": {"enabled": False},
+                        "series": [series] if series else [],
+                        "plotOptions": {
+                            "column": {"dataLabels": {"enabled": True, "inside": False, "style": {"fontSize": "12px"}, "format": "{point.y:.2f}%"}},
+                            "series": {"zones": [{"value": 0, "color": "#fa4b42"}, {"color": "#00e272"}]},
                         },
-                        "yAxis": {
-                            "min": 0,
-                            "title": {"text": "Gain"},
-                        },
-                        "tooltip": {"shared": True, "headerFormat": "<b>{point.key}</b><br/>", "pointFormat": '<span style="color:{series.color}">{series.name}</span>: <b>{point.y:.2f}</b><br/>'},
-                        "plotOptions": {"column": {"pointPadding": 0.2, "borderWidth": 0}},
-                        "series": [{"name": "Absolute Gain", "data": absolute_gains}, {"name": "Percent Gain", "data": percent_gains, "yAxis": 1}],
-                        "yAxis": [{"title": {"text": "Absolute Gain"}}, {"title": {"text": "Percent Gain"}, "opposite": True, "labels": {"format": "{value}%"}}],
                     }
-                ).classes("w-full h-64")
-            with ui.tab_panel(content[1]).classes("p-0"):
+                ).classes("w-full")
+
+            with ui.tab_panel(tab_content[1]).classes("p-0 h-128"):
                 df_to_use = trades_df[trades_df["account_name"] == accounts_df["Name"].iloc[0]].copy()
                 a1_df_sorted = df_to_use.sort_values(by=["exit_time"], ascending=True)
-
-                ui.echart(
-                    {
-                        "series": {
-                            "type": "heatmap",
-                            "coordinateSystem": "calendar",
-                            "calendarIndex": 0,
-                            "data": [[str(x), y] for x, y in zip(a1_df_sorted["exit_time"], a1_df_sorted["actual_pnl"])],
-                        },
-                        "calendar": {
-                            "top": 20,
-                            "left": 30,
-                            # "right": 30,
-                            "cellSize": ["auto", 18],
-                            "range": "2025",
-                            "itemStyle": {"borderWidth": 0.5},
-                            "yearLabel": {"show": False},
-                        },
-                        "tooltip": {"position": "top"},
-                        "visualMap": {
-                            "min": a1_df_sorted["actual_pnl"].min(),
-                            "max": a1_df_sorted["actual_pnl"].max(),
-                            "calculable": True,
-                            "orient": "horizontal",
-                            "left": "center",
-                            "bottom": "40",
-                            "itemHeight": 400,
-                        },
-                    }
-                ).classes("w-[1024px]")
+                heatmap = (
+                    ui.echart(
+                        {
+                            "series": {
+                                "type": "heatmap",
+                                "coordinateSystem": "calendar",
+                                "calendarIndex": 0,
+                                "data": [[str(x), y] for x, y in zip(a1_df_sorted["exit_time"], a1_df_sorted["actual_pnl"])],
+                            },
+                            "calendar": {
+                                "top": 100,
+                                "left": 30,
+                                "cellSize": ["auto", 18],
+                                "range": available_years[0],
+                                "itemStyle": {"borderWidth": 0.5},
+                                "yearLabel": {"show": False},
+                            },
+                            "tooltip": {"position": "top"},
+                            "visualMap": {
+                                "min": a1_df_sorted["actual_pnl"].min(),
+                                "max": a1_df_sorted["actual_pnl"].max(),
+                                "calculable": True,
+                                "orient": "horizontal",
+                                "left": "center",
+                                # "bottom": "40",
+                                "top": "top",
+                                "itemHeight": 400,
+                                "inRange": {"color": ["#fa4b42", "#fe7f35", "#feef6a", "#00e272", "#2caffe", "#544fc5"]},
+                            },
+                        }
+                    )
+                    .classes("w-[1024px] pt-2 h-128")
+                    .style("height: 400px;")
+                )
 
         if right_drawer and right_drawer_rendered_by != "accounts":
             app.storage.client["right_drawer_rendered_by"] = "accounts"
