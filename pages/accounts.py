@@ -1,8 +1,7 @@
 import pandas as pd
 from nicegui import ui, app
-from datetime import datetime
 
-from data.services import get_all_account_balance_series, get_account_monthly_gain_data
+from data.services import get_all_account_balance_series, get_account_monthly_gain_data, get_pnl_for_a_year
 
 
 def accounts():
@@ -43,17 +42,32 @@ def accounts():
             bar_chart.options["plotOptions"]["column"]["dataLabels"]["format"] = "{point.y:.2f}%" if mode_selector_1.value == "Percent" else None
             bar_chart.update()
 
-        def update_heatmap():
-            heatmap.options["calendar"]["range"] = range_selector_1.value if range_selector_1.value in [str(x) for x in available_years] else available_years[0]
-            heatmap.update()
-
         def on_account_selected(e):
             update_state(account_selected=e.args["data"]["Name"])
             update_bar_chart()
+            update_heatmap()
 
         def update_account_charts(e):
             update_bar_chart()
             update_heatmap()
+
+        def update_heatmap():
+            year = range_selector_1.value if range_selector_1.value in [str(x) for x in available_years] else available_years[0]
+            data, min_value, max_value = get_pnl_for_a_year(state["account_selected"], year, trades_df, mode_selector_1.value)
+            heatmap.options["calendar"]["range"] = year
+            heatmap.options["series"]["data"] = data
+            heatmap.options["visualMap"]["min"] = min_value
+            heatmap.options["visualMap"]["max"] = max_value
+            heatmap.options["visualMap"][":formatter"] = "value => value.toFixed(2)" + ("'%'" if mode_selector_1.value == "Percent" else "")
+            if mode_selector_1.value == "Percent":
+                heatmap.options["tooltip"][":formatter"] = (
+                    "params => `${params.marker}<b>${params.value[1].toFixed(2)}%</b> (${new Date(params.value[0]).getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date(params.value[0]).getMonth()]} ${new Date(params.value[0]).getFullYear()})`",
+                )
+            else:
+                heatmap.options["tooltip"][":formatter"] = (
+                    "params => `${params.marker}<b>${params.value[1].toFixed(2)}</b> (${new Date(params.value[0]).getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date(params.value[0]).getMonth()]} ${new Date(params.value[0]).getFullYear()})`",
+                )
+            heatmap.update()
 
         with ui.row().classes("w-full justify-between"):
             ui.label("Equity Curve").classes("text-2xl")
@@ -92,35 +106,31 @@ def accounts():
             ui.label("Accounts Summary").classes("text-2xl")
             ui.button("Add Account", icon="add", on_click=lambda: right_drawer.toggle())
 
-        grid = (
-            ui.aggrid.from_pandas(
-                accounts_df,
-                options={
-                    "domLayout": "autoHeight",
-                    "suppressHorizontalScroll": False,
-                    "ensureDomOrder": True,
-                    "defaultColDef": {"resizable": True},
-                    "rowSelection": "single",
-                    "suppressRowClickSelection": False,
-                    "minWidth": 800,
-                    "columnDefs": [
-                        {"headerName": "Name", "field": "Name", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
-                        {"headerName": "Broker", "field": "Broker", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 150, "minWidth": 100},
-                        {"headerName": "Type", "field": "Type", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                        {"headerName": "Login", "field": "Login", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                        {"headerName": "Platform", "field": "Platform", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                        {"headerName": "Server", "field": "Server", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
-                        {"headerName": "Path", "field": "Path", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
-                        {"headerName": "Currency", "field": "Currency", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                        {"headerName": "Starting Balance", "field": "Starting Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
-                        {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
-                    ],
-                    "initialState": {"rowSelection": ["0"]},
-                },
-            )
-            .on("cellClicked", lambda e: on_account_selected(e))
-            .classes("max-h-128")
-        )
+        ui.aggrid.from_pandas(
+            accounts_df,
+            options={
+                "domLayout": "autoHeight",
+                "suppressHorizontalScroll": False,
+                "ensureDomOrder": True,
+                "defaultColDef": {"resizable": True},
+                "rowSelection": "single",
+                "suppressRowClickSelection": False,
+                "minWidth": 800,
+                "columnDefs": [
+                    {"headerName": "Name", "field": "Name", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
+                    {"headerName": "Broker", "field": "Broker", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 150, "minWidth": 100},
+                    {"headerName": "Type", "field": "Type", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
+                    {"headerName": "Login", "field": "Login", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
+                    {"headerName": "Platform", "field": "Platform", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
+                    {"headerName": "Server", "field": "Server", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
+                    {"headerName": "Path", "field": "Path", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
+                    {"headerName": "Currency", "field": "Currency", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
+                    {"headerName": "Starting Balance", "field": "Starting Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
+                    {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
+                ],
+                "initialState": {"rowSelection": ["0"]},
+            },
+        ).on("cellClicked", lambda e: on_account_selected(e)).classes("max-h-128")
 
         with ui.row().classes("w-full items-center justify-between pr-1"):
             range_selector_1 = ui.toggle(options=["YTD", "1 Year"] + [str(year) for year in available_years], value="1 Year").on_value_change(update_account_charts)
@@ -130,7 +140,6 @@ def accounts():
         with ui.tabs() as tabs:
             for title in tab_content:
                 ui.tab(title)
-            tab_label = ui.label().bind_text_from(tabs, "value")
 
         with ui.tab_panels(tabs, value=tab_content[0]).classes("w-full p-0 h-128 h-full"):
             with ui.tab_panel(tab_content[0]).classes("p-0 h-128 h-full"):
@@ -152,8 +161,7 @@ def accounts():
                 ).classes("w-full")
 
             with ui.tab_panel(tab_content[1]).classes("p-0 h-128"):
-                df_to_use = trades_df[trades_df["account_name"] == accounts_df["Name"].iloc[0]].copy()
-                a1_df_sorted = df_to_use.sort_values(by=["exit_time"], ascending=True)
+                data, min_value, max_value = get_pnl_for_a_year(state["account_selected"], available_years[0], trades_df, mode_selector_1.value)
                 heatmap = (
                     ui.echart(
                         {
@@ -161,7 +169,7 @@ def accounts():
                                 "type": "heatmap",
                                 "coordinateSystem": "calendar",
                                 "calendarIndex": 0,
-                                "data": [[str(x), y] for x, y in zip(a1_df_sorted["exit_time"], a1_df_sorted["actual_pnl"])],
+                                "data": data,
                             },
                             "calendar": {
                                 "top": 100,
@@ -171,10 +179,13 @@ def accounts():
                                 "itemStyle": {"borderWidth": 0.5},
                                 "yearLabel": {"show": False},
                             },
-                            "tooltip": {"position": "top"},
+                            "tooltip": {
+                                "position": "top",
+                                ":formatter": "params => `${params.marker}<b>${params.value[1].toFixed(2)}%</b> (${new Date(params.value[0]).getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date(params.value[0]).getMonth()]} ${new Date(params.value[0]).getFullYear()})`",
+                            },
                             "visualMap": {
-                                "min": a1_df_sorted["actual_pnl"].min(),
-                                "max": a1_df_sorted["actual_pnl"].max(),
+                                "min": min_value,
+                                "max": max_value,
                                 "calculable": True,
                                 "orient": "horizontal",
                                 "left": "center",
@@ -182,6 +193,7 @@ def accounts():
                                 "top": "top",
                                 "itemHeight": 400,
                                 "inRange": {"color": ["#fa4b42", "#fe7f35", "#feef6a", "#00e272", "#2caffe", "#544fc5"]},
+                                ":formatter": "value => value.toFixed(2) + '%'",
                             },
                         }
                     )

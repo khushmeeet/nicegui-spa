@@ -37,12 +37,8 @@ def get_account_monthly_gain_data(account_name: str, range_filter: str, mode: st
     if df.empty:
         return []
 
-    # Aggregate by month
     monthly = df.groupby("month").agg({"actual_pnl": "sum", "starting_balance": "first", "ending_balance": "last"}).reset_index()
-
-    # Fill in missing months
     all_months = pd.date_range(start=monthly["month"].min(), end=monthly["month"].max(), freq="MS")
-
     monthly = monthly.set_index("month").reindex(all_months, fill_value=0).rename_axis("month").reset_index()
 
     if mode == "Percent":
@@ -51,3 +47,33 @@ def get_account_monthly_gain_data(account_name: str, range_filter: str, mode: st
         monthly["value"] = monthly["actual_pnl"]
 
     return {"name": "Gain", "data": [round(v, 2) for v in monthly["value"]], "colorByPoint": True}, [m.strftime("%b %Y") for m in monthly["month"]]
+
+
+def get_pnl_for_a_year(account_name: str, year: str, df: pd.DataFrame, mode: str = "Value"):
+    # df_to_use = df[df["account_name"] == account_name].copy()
+    # df_to_use = df_to_use[df_to_use["exit_time"].dt.year == int(year)]
+    # df_to_use.sort_values(by=["exit_time"], ascending=True, inplace=True)
+    # min_val = df_to_use["actual_pnl"].min()
+    # max_val = df_to_use["actual_pnl"].max()
+    # if mode == "Percent":
+    #     df_to_use["percent_pnl"] = (df_to_use["actual_pnl"] / df_to_use["starting_balance"]) * 100
+    #     min_val = df_to_use["percent_pnl"].min()
+    #     max_val = df_to_use["percent_pnl"].max()
+    #     return [[str(x), y] for x, y in zip(df_to_use["exit_time"], df_to_use["percent_pnl"])], min_val, max_val
+    # return [[str(x), y] for x, y in zip(df_to_use["exit_time"], df_to_use["actual_pnl"])], min_val, max_val
+    df_to_use = df[df["account_name"] == account_name].copy()
+    df_to_use = df_to_use[df_to_use["exit_time"].dt.year == int(year)]
+
+    df_to_use["exit_date"] = df_to_use["exit_time"].dt.date
+
+    if mode == "Percent":
+        df_to_use["percent_pnl"] = (df_to_use["actual_pnl"] / df_to_use["starting_balance"]) * 100
+        daily_agg = df_to_use.groupby("exit_date")["percent_pnl"].sum()
+    else:
+        daily_agg = df_to_use.groupby("exit_date")["actual_pnl"].sum()
+
+    min_val = daily_agg.min()
+    max_val = daily_agg.max()
+
+    data = [[str(date), value] for date, value in daily_agg.items()]
+    return data, min_val, max_val
