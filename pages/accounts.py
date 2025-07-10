@@ -58,7 +58,7 @@ def accounts():
             heatmap.options["series"]["data"] = data
             heatmap.options["visualMap"]["min"] = min_value
             heatmap.options["visualMap"]["max"] = max_value
-            heatmap.options["visualMap"][":formatter"] = "value => value.toFixed(2)" + ("'%'" if mode_selector_1.value == "Percent" else "")
+            heatmap.options["visualMap"][":formatter"] = "value => value.toFixed(2)" + ("'%'" if mode_selector_1.value == "Percent" else "''")
             if mode_selector_1.value == "Percent":
                 heatmap.options["tooltip"][":formatter"] = (
                     "params => `${params.marker}<b>${params.value[1].toFixed(2)}%</b> (${new Date(params.value[0]).getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date(params.value[0]).getMonth()]} ${new Date(params.value[0]).getFullYear()})`",
