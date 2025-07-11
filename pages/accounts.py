@@ -58,12 +58,13 @@ def accounts():
             heatmap.options["series"]["data"] = data
             heatmap.options["visualMap"]["min"] = min_value
             heatmap.options["visualMap"]["max"] = max_value
-            heatmap.options["visualMap"][":formatter"] = "value => value.toFixed(2)" + ("'%'" if mode_selector_1.value == "Percent" else "''")
             if mode_selector_1.value == "Percent":
+                heatmap.options["visualMap"][":formatter"] = "value => value.toFixed(2) + '%'"
                 heatmap.options["tooltip"][":formatter"] = (
                     "params => `${params.marker}<b>${params.value[1].toFixed(2)}%</b> (${new Date(params.value[0]).getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date(params.value[0]).getMonth()]} ${new Date(params.value[0]).getFullYear()})`",
                 )
             else:
+                heatmap.options["visualMap"][":formatter"] = "value => value.toFixed(2)"
                 heatmap.options["tooltip"][":formatter"] = (
                     "params => `${params.marker}<b>${params.value[1].toFixed(2)}</b> (${new Date(params.value[0]).getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date(params.value[0]).getMonth()]} ${new Date(params.value[0]).getFullYear()})`",
                 )
@@ -108,6 +109,7 @@ def accounts():
 
         ui.aggrid.from_pandas(
             accounts_df,
+            theme="quartz",
             options={
                 "domLayout": "autoHeight",
                 "suppressHorizontalScroll": False,
@@ -117,20 +119,20 @@ def accounts():
                 "suppressRowClickSelection": False,
                 "minWidth": 800,
                 "columnDefs": [
-                    {"headerName": "Name", "field": "Name", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
-                    {"headerName": "Broker", "field": "Broker", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 150, "minWidth": 100},
-                    {"headerName": "Type", "field": "Type", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                    {"headerName": "Login", "field": "Login", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                    {"headerName": "Platform", "field": "Platform", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                    {"headerName": "Server", "field": "Server", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 200, "minWidth": 100},
-                    {"headerName": "Path", "field": "Path", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
-                    {"headerName": "Currency", "field": "Currency", "filter": "agTextColumnFilter", "floatingFilter": True, "width": 100, "minWidth": 100},
-                    {"headerName": "Starting Balance", "field": "Starting Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
-                    {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "floatingFilter": True, "minWidth": 100},
+                    {"headerName": "Name", "field": "Name", "filter": "agTextColumnFilter", "width": 200, "minWidth": 100},
+                    {"headerName": "Broker", "field": "Broker", "filter": "agTextColumnFilter", "width": 150, "minWidth": 100},
+                    {"headerName": "Type", "field": "Type", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
+                    {"headerName": "Login", "field": "Login", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
+                    {"headerName": "Platform", "field": "Platform", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
+                    {"headerName": "Server", "field": "Server", "filter": "agTextColumnFilter", "width": 200, "minWidth": 100},
+                    {"headerName": "Path", "field": "Path", "filter": "agTextColumnFilter", "minWidth": 100},
+                    {"headerName": "Currency", "field": "Currency", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
+                    {"headerName": "Starting Balance", "field": "Starting Balance", "filter": "agTextColumnFilter", "minWidth": 100},
+                    {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "minWidth": 100},
                 ],
                 "initialState": {"rowSelection": ["0"]},
             },
-        ).on("cellClicked", lambda e: on_account_selected(e)).classes("max-h-128")
+        ).on("cellClicked", lambda e: on_account_selected(e)).classes("h-[315px]")
 
         with ui.row().classes("w-full items-center justify-between pr-1"):
             range_selector_1 = ui.toggle(options=["YTD", "1 Year"] + [str(year) for year in available_years], value="1 Year").on_value_change(update_account_charts)
@@ -173,11 +175,11 @@ def accounts():
                             },
                             "calendar": {
                                 "top": 100,
-                                "left": 30,
+                                "left": 80,
                                 "cellSize": ["auto", 18],
                                 "range": available_years[0],
                                 "itemStyle": {"borderWidth": 0.5},
-                                "yearLabel": {"show": False},
+                                "yearLabel": {"show": True},
                             },
                             "tooltip": {
                                 "position": "top",
