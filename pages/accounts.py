@@ -8,6 +8,7 @@ def accounts():
     right_drawer: ui.right_drawer = app.storage.client["right_drawer"]
     right_drawer_rendered_by = app.storage.client["right_drawer_rendered_by"]
     accounts_df = app.storage.client["accounts_df"]
+    accounts_df = pd.concat([accounts_df, accounts_df])
     accounts_df["selected"] = False
     accounts_df.loc[1, "selected"] = True
     trades_df = app.storage.client["trades_df"]
@@ -71,7 +72,7 @@ def accounts():
             heatmap.update()
 
         with ui.row().classes("w-full justify-between"):
-            ui.label("Equity Curve").classes("text-2xl")
+            ui.label("📈 Equity Curve").classes("text-2xl")
             ui.toggle(["Value", "Percent"], value="Value", on_change=on_equity_curve_percent_value_toggle)
 
         chart = ui.highchart(
@@ -104,35 +105,34 @@ def accounts():
         ).classes("w-full h-[540px]")
 
         with ui.row().classes("w-full items-center justify-between"):
-            ui.label("Accounts Summary").classes("text-2xl")
+            ui.label("📊 Accounts Summary").classes("text-2xl")
             ui.button("Add Account", icon="add", on_click=lambda: right_drawer.toggle())
-
-        ui.aggrid.from_pandas(
-            accounts_df,
-            theme="quartz",
-            options={
-                "domLayout": "autoHeight",
-                "suppressHorizontalScroll": False,
-                "ensureDomOrder": True,
-                "defaultColDef": {"resizable": True},
-                "rowSelection": "single",
-                "suppressRowClickSelection": False,
-                "minWidth": 800,
-                "columnDefs": [
-                    {"headerName": "Name", "field": "Name", "filter": "agTextColumnFilter", "width": 200, "minWidth": 100},
-                    {"headerName": "Broker", "field": "Broker", "filter": "agTextColumnFilter", "width": 150, "minWidth": 100},
-                    {"headerName": "Type", "field": "Type", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
-                    {"headerName": "Login", "field": "Login", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
-                    {"headerName": "Platform", "field": "Platform", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
-                    {"headerName": "Server", "field": "Server", "filter": "agTextColumnFilter", "width": 200, "minWidth": 100},
-                    {"headerName": "Path", "field": "Path", "filter": "agTextColumnFilter", "minWidth": 100},
-                    {"headerName": "Currency", "field": "Currency", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
-                    {"headerName": "Starting Balance", "field": "Starting Balance", "filter": "agTextColumnFilter", "minWidth": 100},
-                    {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "minWidth": 100},
-                ],
-                "initialState": {"rowSelection": ["0"]},
-            },
-        ).on("cellClicked", lambda e: on_account_selected(e)).classes("h-[315px]")
+        with ui.row().classes("w-full"):
+            ui.aggrid.from_pandas(
+                accounts_df,
+                theme="quartz",
+                options={
+                    "suppressHorizontalScroll": False,
+                    "ensureDomOrder": True,
+                    "defaultColDef": {"resizable": True},
+                    "rowSelection": "single",
+                    "suppressRowClickSelection": False,
+                    "minWidth": 800,
+                    "columnDefs": [
+                        {"headerName": "Name", "field": "Name", "checkboxSelection": True, "filter": "agTextColumnFilter", "width": 200, "minWidth": 100},
+                        {"headerName": "Broker", "field": "Broker", "filter": "agTextColumnFilter", "width": 150, "minWidth": 100},
+                        {"headerName": "Type", "field": "Type", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
+                        {"headerName": "Login", "field": "Login", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
+                        {"headerName": "Platform", "field": "Platform", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
+                        {"headerName": "Server", "field": "Server", "filter": "agTextColumnFilter", "width": 200, "minWidth": 100},
+                        {"headerName": "Path", "field": "Path", "filter": "agTextColumnFilter", "minWidth": 100},
+                        {"headerName": "Currency", "field": "Currency", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
+                        {"headerName": "Starting Balance", "field": "Starting Balance", "filter": "agTextColumnFilter", "minWidth": 100},
+                        {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "minWidth": 100},
+                    ],
+                    "initialState": {"rowSelection": ["0"]},
+                },
+            ).on("cellClicked", lambda e: on_account_selected(e))
 
         with ui.row().classes("w-full items-center justify-between pr-1"):
             range_selector_1 = ui.toggle(options=["YTD", "1 Year"] + [str(year) for year in available_years], value="1 Year").on_value_change(update_account_charts)
@@ -160,7 +160,7 @@ def accounts():
                             "series": {"zones": [{"value": 0, "color": "#fa4b42"}, {"color": "#00e272"}]},
                         },
                     }
-                ).classes("w-full")
+                ).classes("w-full h-[295px]")
 
             with ui.tab_panel(tab_content[1]).classes("p-0 h-128"):
                 data, min_value, max_value = get_pnl_for_a_year(state["account_selected"], available_years[0], trades_df, mode_selector_1.value)
@@ -174,7 +174,7 @@ def accounts():
                                 "data": data,
                             },
                             "calendar": {
-                                "top": 100,
+                                "top": 80,
                                 "left": 80,
                                 "cellSize": ["auto", 18],
                                 "range": available_years[0],
@@ -198,9 +198,8 @@ def accounts():
                                 ":formatter": "value => value.toFixed(2) + '%'",
                             },
                         }
-                    )
-                    .classes("w-[1024px] pt-2 h-128")
-                    .style("height: 400px;")
+                    ).classes("w-[1024px] pt-2")
+                    # .style("height: 400px;")
                 )
 
         if right_drawer and right_drawer_rendered_by != "accounts":

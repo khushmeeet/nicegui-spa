@@ -10,7 +10,9 @@ from header import header
 from left_drawer import left_drawer
 from right_drawer import right_drawer
 from pages import pages
-from data.querries import get_all_items_from_account, get_all_items_from_trade
+from models import Strategy
+
+from data.queries import get_all_items_from_account, get_all_items_from_trade, get_all_items_from_table
 
 
 @ui.page("/")
@@ -25,6 +27,7 @@ def main(path: str = None):
     app.storage.client["active_page"] = "dashboard"
     app.storage.client["accounts_df"] = get_all_items_from_account()
     app.storage.client["trades_df"] = get_all_items_from_trade()
+    app.storage.client["strategies_df"] = get_all_items_from_table(Strategy, ["id", "name", "description", "tag"])
 
     app.storage.client["active_page"] = path.strip("/") if path.strip("/") else "dashboard"
 

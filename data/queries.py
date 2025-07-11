@@ -37,7 +37,7 @@ def get_all_items_from_trade() -> pd.DataFrame:
                     "duration": t.duration.total_seconds() if t.duration else None,
                     "actual_pnl": t.actual_pnl,
                     "account_name": t.account.name if t.account else None,
-                    "account_broker": t.account.broker if t.account else None,
+                    "account_broker": t.account.broker.name if t.account else "None",
                     "symbol": t.symbol.id,
                     "instrument": t.instrument.id,
                     "strategy": t.strategy.name if t.strategy else None,
@@ -110,11 +110,11 @@ def get_all_items_from_table(table, fields) -> pd.DataFrame:
         items = session.query(table).all()
         data = []
         for item in items:
-            data.append({**{snake_to_title(field): getattr(item, field) for field in fields}})
+            data.append({**{field: getattr(item, field) for field in fields}})
         df = pd.DataFrame(data)
         try:
             df.set_index(
-                "ID",
+                "id",
                 inplace=True,
             )
         except KeyError:
