@@ -6,6 +6,9 @@ from utils.case_converter import title_to_snake
 from models.enums import TradeSuccessProbabilityType, TradingMindState, DirectionType, OrderType, CurrencyType, AccountType, PlatformType
 
 
+MAX_SYMBOLS_PER_TRADE = 10
+
+
 async def trading():
     right_drawer = app.storage.client["right_drawer"]
     right_drawer_rendered_by = app.storage.client["right_drawer_rendered_by"]
@@ -27,6 +30,10 @@ async def trading():
     }
     grouping_list = list(tree_enum_mapping.keys())
 
+    state = {
+        "symbols_grid_visible": False,
+    }
+
     ui.markdown("## 🏦 Trading")
 
     with ui.splitter(value=27) as splitter:
@@ -39,9 +46,9 @@ async def trading():
 
                 with ui.row().classes("w-full justify-between items-center"):
                     ui.label("Select Account(s)")
-                    with ui.button_group().props("rounded outline"):
-                        tree_expand_btn = ui.button(icon="add").props("outline")
-                        tree_collapse_btn = ui.button(icon="remove").props("outline")
+                    with ui.button_group().props("flat").classes("bg-grey-2 text-grey-14"):
+                        tree_expand_btn = ui.button(icon="add", color="text-grey-14").props("flat dense")
+                        tree_collapse_btn = ui.button(icon="remove", color="text-grey-14").props("flat dense")
                 account_tree = (
                     ui.tree(
                         build_tree(accounts_df, grouping_list[:2], enum_mapping=tree_enum_mapping, ungroup_keys=grouping_list[-1]),
@@ -86,29 +93,43 @@ async def trading():
                             ui.icon("shopping_cart")
                         with ui.select([p.value for p in CurrencyType], label="Direction based on currency", with_input=True, clearable=True).props("outlined").classes("w-64").add_slot("prepend"):
                             ui.icon("currency_exchange")
-                with (
-                    ui.select(
-                        symbols_df["symbol"].to_list(),
-                        label="Instruments",
-                        multiple=True,
-                        with_input=True,
-                        clearable=True,
-                    )
-                    .props("use-chips outlined")
-                    .classes("w-full mb-3")
-                    .add_slot("prepend")
-                ):
+
+                symbols_select = ui.select(symbols_df["symbol"].to_list(), label="Symbols", multiple=True, with_input=True, clearable=True).props("use-chips outlined").classes("w-full mb-3")
+
+                with symbols_select.add_slot("prepend"):
                     ui.icon("monetization_on")
 
-                grid = ui.aggrid(
-                    theme="quartz",
-                    options={
-                        "columnDefs": [{"headerName": "Selected Currency", "field": "currency"}],
-                        # 'rowData': grid_rows,
-                    },
-                ).classes("w-full")
+                symbols_grid = (
+                    ui.aggrid(
+                        theme="quartz",
+                        options={
+                            "columnDefs": [
+                                {"headerName": "Symbol", "field": "symbol"},
+                                {"headerName": "Risk %", "field": "risk"},
+                                {"headerName": "Direction", "field": "direction"},
+                                {"headerName": "Order Type", "field": "order_type"},
+                                {"headerName": "Entry Price", "field": "entry_price"},
+                                {"headerName": "SL/TP Factor", "field": "sl_tp_factor"},
+                                {"headerName": "SL pips", "field": "sl_pips"},
+                                {"headerName": "TP pips", "field": "tp_pips"},
+                                {"headerName": "Lots(~)", "field": "lots"},
+                                {"headerName": "Net Risk", "field": "net_risk"},
+                            ],
+                        },
+                    )
+                    .bind_visibility_from(state, "symbols_grid_visible")
+                    .classes("w-full")
+                )
 
-                ui.button("Execute", icon="rocket_launch")
+                def on_instruments_change(e):
+                    rowData = [{"symbol": symbol, "risk": 1} for symbol in e.value]
+                    state["symbols_grid_visible"] = True if len(rowData) > 0 else False
+                    symbols_grid.options["rowData"] = rowData
+                    symbols_grid.update()
+
+                symbols_select.on_value_change(on_instruments_change)
+
+                ui.button("Execute", icon="rocket_launch").bind_visibility_from(state, "symbols_grid_visible")
 
     if right_drawer and right_drawer_rendered_by != "trading":
         app.storage.client["right_drawer_rendered_by"] = "trading"
