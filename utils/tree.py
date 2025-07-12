@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def resolve_enum_value(enum_class, key_val: str):
     try:
         member_name = key_val.split(".")[-1]
@@ -10,7 +11,7 @@ def resolve_enum_value(enum_class, key_val: str):
 
 def build_tree(df: pd.DataFrame, group_keys: list, path_parts: list = [], enum_mapping: dict = {}, ungroup_keys: list = [], is_root=True):
     if df.empty:
-        return [], []
+        return []
 
     if group_keys == []:
         leaves = []
@@ -25,38 +26,29 @@ def build_tree(df: pd.DataFrame, group_keys: list, path_parts: list = [], enum_m
 
             leaf = {
                 "label": label,
-                "value": row["ID"],
+                "id": row["ID"],
             }
             leaves.append(leaf)
 
         if is_root:
-            return [{
-                "label": "All Accounts",
-                "value": "All Accounts",
-                "children": leaves
-            }], ["All Accounts"]
+            return [{"label": "All Accounts", "id": "All Accounts", "children": leaves}]
         else:
-            return leaves, []
-
+            return leaves
 
     current_key = group_keys[0]
     tree = []
-    expansions = []
 
     for key_val, group_df in df.groupby(current_key, dropna=False):
         enum_cls = enum_mapping.get(current_key)
         value = resolve_enum_value(enum_cls, str(key_val))
         new_path = path_parts + [value]
-        # label = resolve_enum_value(enum_cls, str(key_val))
+
         node = {
             "label": value,
-            "value": "-".join(new_path),
+            "id": "-".join(new_path),
         }
-        children, children_expansion = build_tree(group_df, group_keys[1:], new_path, enum_mapping=enum_mapping, ungroup_keys=ungroup_keys, is_root=False)
+        children = build_tree(group_df, group_keys[1:], new_path, enum_mapping=enum_mapping, ungroup_keys=ungroup_keys, is_root=False)
         if children:
             node["children"] = children
         tree.append(node)
-        expansions.append(node["value"])
-        if children_expansion is not None:
-            expansions.extend(children_expansion)
-    return tree, list(set(expansions))
+    return tree
