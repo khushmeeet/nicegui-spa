@@ -1,12 +1,25 @@
 import pandas as pd
 from nicegui import ui, app
 
+from models import Broker
 from data.services import get_all_account_balance_series, get_account_monthly_gain_data, get_pnl_for_a_year
+
+
+class NewAccountData:
+    name: str = None
+    broker: Broker = None
+    login: str = None
+    password: str = None
+    type: str = None
+
+
+new_account_data = NewAccountData()
 
 
 def accounts():
     right_drawer: ui.right_drawer = app.storage.client["right_drawer"]
     right_drawer_rendered_by = app.storage.client["right_drawer_rendered_by"]
+    brokers_df = app.storage.client["brokers_df"]
     accounts_df = app.storage.client["accounts_df"]
     accounts_df = pd.concat([accounts_df, accounts_df])
     accounts_df["selected"] = False
@@ -209,8 +222,8 @@ def accounts():
             with right_drawer:
                 ui.markdown("##### ➕ Add Account")
                 with ui.grid().classes("w-full"):
-                    ui.input(label="Name").classes("w-full")
-                    ui.select(options=["Broker 1", "Broker 2", "Broker 3"], label="Broker").classes("w-full")
+                    ui.input(label="Name").classes("w-full").bind_value(new_account_data, "name")
+                    ui.select(options=brokers_df["name"].tolist(), label="Broker").classes("w-full")
                     ui.input(label="Login").classes("w-full")
                     ui.input(label="Password", password=True, password_toggle_button=True).classes("w-full")
                     ui.select(label="Type", options=["Live", "Demo"]).classes("w-full")
