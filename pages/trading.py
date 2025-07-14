@@ -119,7 +119,13 @@ async def trading():
                                 {"headerName": "Risk %", "field": "risk", ":valueFormatter": "p=>p.value.toFixed(3)"},
                                 {"headerName": "Direction", "field": "direction"},
                                 {"headerName": "Order Type", "field": "order_type"},
-                                {"headerName": "Entry Price", "field": "entry_price", ":valueFormatter": "p=>p.value.toFixed(5)"},
+                                {
+                                    "headerName": "Entry Price",
+                                    "field": "entry_price",
+                                    ":valueFormatter": "p=>p.value.toFixed(5)",
+                                    "editable": True,
+                                    "hide": True,
+                                },
                                 {"headerName": "SL/TP Factor", "field": "sl_tp_factor", ":valueFormatter": "p=>p.value.toFixed(2)", "editable": True},
                                 {"headerName": "SL pips", "field": "sl_pips", ":valueFormatter": "p=>p.value.toFixed(1)", "editable": True},
                                 {"headerName": "TP pips", "field": "tp_pips", ":valueFormatter": "p=>p.value.toFixed(1)", "editable": True},
@@ -161,18 +167,17 @@ async def trading():
                         symbols_grid.update()
                     else:
                         deleted_symbol = list(set([item["symbol"] for item in state["trade_items"]]) - set(e.value))
-                        symbol_rowData = list(filter(lambda item: item["symbol"] in deleted_symbol, state["trade_items"]))
-                        symbols_grid.run_grid_method("applyTransaction", {"remove": symbol_rowData})
-                        rowData = list(filter(lambda item: item["symbol"] not in e.value, state["trade_items"]))
+                        deleted_symbol_rowdata = list(filter(lambda item: item["symbol"] in deleted_symbol, state["trade_items"]))
+                        symbols_grid.run_grid_method("applyTransaction", {"remove": deleted_symbol_rowdata})
+                        rowData = list(filter(lambda item: item["symbol"] not in deleted_symbol, state["trade_items"]))
+                        state["trade_items"] = rowData
+
                     if len(e.value) > 0:
                         for i in range(len(rowData)):
                             rowData[i]["risk"] = per_symbol_risk
 
                     state["trade_items"] = rowData
                     state["symbols_grid_visible"] = True if len(rowData) > 0 else False
-                    # symbols_grid.options["rowData"] = rowData
-                    # symbols_grid.style(f"height: {51+42*len(rowData)}px;")
-                    # symbols_grid.update()
 
                 symbols_select.on_value_change(on_instruments_change)
 
@@ -195,6 +200,11 @@ async def trading():
                     if len(tis) > 0:
                         for ti in tis:
                             symbols_grid.run_row_method(ti["symbol"], "setDataValue", "order_type", e.value)
+                    if order_type == OrderType.market:
+                        symbols_grid.run_grid_method("setColumnsVisible", ["entry_price"], False)
+                    else:
+                        symbols_grid.run_grid_method("setColumnsVisible", ["entry_price"], True)
+                    symbols_grid.update()
 
                 def on_direction_change(e):
                     tis = state["trade_items"]
