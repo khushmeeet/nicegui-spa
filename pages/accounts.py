@@ -1,27 +1,53 @@
 import pandas as pd
 from nicegui import ui, app
 
-from models import Broker
+from component import local_file_picker
+from models import Broker, Account
+from models.enums import AccountType, PlatformType, CurrencyType
 from data.services import get_all_account_balance_series, get_account_monthly_gain_data, get_pnl_for_a_year
+from db.get_session import get_session
 
 
 class NewAccountData:
     name: str = None
-    broker: Broker = None
+    broker: str = None
     login: str = None
     password: str = None
     type: str = None
+    platform: str = None
+    path: str = None
+    currency: str = None
+    starting_balance: float = 0
+    current_balance: float = 0
+    portable: bool = True
+    server: str = None
+
+    def get_db_account(self, session):
+        broker = session.query(Broker).filter_by(name=self.broker).first()
+        return Account(
+            name=self.name,
+            broker=broker,
+            login=self.login,
+            password=self.password,
+            type=AccountType(self.type),
+            platform=PlatformType(self.platform),
+            path=self.path,
+            currency=CurrencyType(self.currency),
+            starting_balance=self.starting_balance,
+            current_balance=self.current_balance,
+            portable=self.portable,
+            server=self.server,
+        )
 
 
 new_account_data = NewAccountData()
 
 
-def accounts():
+async def accounts():
     right_drawer: ui.right_drawer = app.storage.client["right_drawer"]
     right_drawer_rendered_by = app.storage.client["right_drawer_rendered_by"]
     brokers_df = app.storage.client["brokers_df"]
     accounts_df = app.storage.client["accounts_df"]
-    accounts_df = pd.concat([accounts_df, accounts_df])
     accounts_df["selected"] = False
     accounts_df.loc[1, "selected"] = True
     trades_df = app.storage.client["trades_df"]
@@ -58,8 +84,7 @@ def accounts():
 
         def on_account_selected(e):
             update_state(account_selected=e.args["data"]["Name"])
-            update_bar_chart()
-            update_heatmap()
+            update_account_charts(None)
 
         def update_account_charts(e):
             update_bar_chart()
@@ -116,17 +141,17 @@ def accounts():
                 "tooltip": {"pointFormat": '<span style="color:{series.color}">{series.name}</span>: {point.y:.2f}<br/>'},
             },
         ).classes("w-full h-[540px]")
-
+        dialog = ui.dialog()
         with ui.row().classes("w-full items-center justify-between"):
             ui.label("📊 Accounts Summary").classes("text-2xl")
-            ui.button("Add Account", icon="add", on_click=lambda: right_drawer.toggle())
+            # ui.button("Add Account", icon="add", on_click=lambda: right_drawer.toggle())
+            ui.button("Add Account", icon="add", on_click=dialog.open)
         with ui.row().classes("w-full"):
-            ui.aggrid.from_pandas(
-                accounts_df,
+            accounts_grid = ui.aggrid(
                 theme="quartz",
                 options={
                     "suppressHorizontalScroll": False,
-                    "ensureDomOrder": True,
+                    # "ensureDomOrder": True,
                     "defaultColDef": {"resizable": True},
                     "rowSelection": "single",
                     "suppressRowClickSelection": False,
@@ -144,6 +169,7 @@ def accounts():
                         {"headerName": "Current Balance", "field": "Current Balance", "filter": "agTextColumnFilter", "minWidth": 100},
                     ],
                     "initialState": {"rowSelection": ["0"]},
+                    "rowData": accounts_df.to_dict("records"),
                 },
             ).on("cellClicked", lambda e: on_account_selected(e))
 
@@ -215,23 +241,106 @@ def accounts():
                     # .style("height: 400px;")
                 )
 
-        if right_drawer and right_drawer_rendered_by != "accounts":
-            app.storage.client["right_drawer_rendered_by"] = "accounts"
-            right_drawer.clear()
+        # if right_drawer and right_drawer_rendered_by != "accounts":
+        #     app.storage.client["right_drawer_rendered_by"] = "accounts"
+        #     right_drawer.clear()
 
-            with right_drawer:
-                ui.markdown("##### ➕ Add Account")
-                with ui.grid().classes("w-full"):
-                    ui.input(label="Name").classes("w-full").bind_value(new_account_data, "name")
-                    ui.select(options=brokers_df["name"].tolist(), label="Broker").classes("w-full")
-                    ui.input(label="Login").classes("w-full")
-                    ui.input(label="Password", password=True, password_toggle_button=True).classes("w-full")
-                    ui.select(label="Type", options=["Live", "Demo"]).classes("w-full")
-                    ui.select(label="Platform", options=["MetaTrader 5", "cTrader 5"]).classes("w-full")
-                    ui.input(label="Server").classes("w-full")
-                    ui.checkbox("Is Portable", value=True).classes("w-full")
-                ui.upload(label="Path", multiple=False, max_files=1).classes("w-full")
-                with ui.row():
-                    ui.button("Save", icon="save", on_click=lambda: ui.notify("Add Account clicked", position="bottom-right"))
-                    ui.button("Cancel", icon="close", on_click=lambda: right_drawer.toggle())
-                    ui.button("Clear", icon="delete_outline", on_click=lambda: ui.notify("Add Account clicked"))
+        with dialog, ui.card():
+            ui.markdown("##### ➕ Add Account")
+
+            async def pick_file() -> None:
+                result = await local_file_picker("~", multiple=False)
+                new_account_data.path = result[0]
+
+            with ui.grid().classes("w-full"):
+                n = ui.input(label="Name", value="test").classes("w-full").bind_value_to(new_account_data, "name")
+                b = ui.select(options=brokers_df["name"].tolist(), label="Broker", value=brokers_df["name"].tolist()[-1]).classes("w-full").bind_value_to(new_account_data, "broker")
+                l = ui.input(label="Login", value=12345).classes("w-full").bind_value_to(new_account_data, "login")
+                p = ui.input(label="Password", value="test", password=True, password_toggle_button=True).classes("w-full").bind_value_to(new_account_data, "password")
+                t = (
+                    ui.select(label="Type", options=[p.value for p in AccountType], value="Live")
+                    .classes("w-full")
+                    .bind_value_to(new_account_data, "type", lambda x: AccountType(x) if x is not None else None)
+                )
+                pf = (
+                    ui.select(label="Platform", options=[p.value for p in PlatformType], value="MT4")
+                    .classes("w-full")
+                    .bind_value_to(new_account_data, "platform", lambda x: PlatformType(x) if x is not None else None)
+                )
+                s = ui.input(label="Server", value="test-server").classes("w-full").bind_value_to(new_account_data, "server")
+                c = (
+                    ui.select([p.value for p in CurrencyType], label="Currency", value="USD")
+                    .classes("w-full")
+                    .bind_value_to(new_account_data, "currency", lambda x: CurrencyType(x) if x is not None else None)
+                )
+                ip = ui.checkbox("Is Portable", value=True).classes("w-full").bind_value_to(new_account_data, "portable")
+            with ui.row():
+                ui.button("Choose file", on_click=pick_file, icon="folder")
+                fpl = ui.label().classes("w-full").bind_text_from(new_account_data, "path")
+            with ui.row():
+
+                def clear_form():
+                    # new_account_data = Account()
+                    new_account_data.name = None
+                    n.value = None
+                    n.update()
+                    new_account_data.broker = None
+                    b.value = None
+                    b.update()
+                    new_account_data.login = None
+                    l.value = None
+                    l.update()
+                    new_account_data.password = None
+                    p.value = None
+                    p.update()
+                    new_account_data.type = None
+                    t.value = None
+                    t.update()
+                    new_account_data.platform = None
+                    pf.value = None
+                    pf.update()
+                    new_account_data.server = None
+                    s.value = None
+                    s.update()
+                    new_account_data.currency = None
+                    c.value = None
+                    c.update()
+                    new_account_data.portable = True
+                    ip.value = True
+                    ip.update()
+                    new_account_data.path = None
+                    fpl.text = None
+                    fpl.update()
+
+                def add_account():
+                    with get_session() as session:
+                        new_account_db_data = new_account_data.get_db_account(session)
+                        session.add(new_account_db_data)
+                        session.commit()
+                        dialog.close()
+                        ui.notify("Account added successfully", type="positive", position="top-right", duration=3000)
+
+                    new_grid_row = {
+                        # "ID": new_account_data.id,
+                        "Name": new_account_data.name,
+                        "Broker": new_account_data.broker,
+                        "Login": new_account_data.login,
+                        "Type": AccountType(new_account_data.type),
+                        "Platform": PlatformType(new_account_data.platform),
+                        "Server": new_account_data.server,
+                        "Currency": CurrencyType(new_account_data.currency),
+                        "Is Portable": new_account_data.portable,
+                        "Starting Balance": new_account_data.starting_balance,
+                        "Current Balance": new_account_data.current_balance,
+                        "Path": new_account_data.path,
+                        "Instruments #": 0,
+                        "Archived": False,
+                        "selected": False,
+                    }
+                    accounts_grid.options["rowData"].append(new_grid_row)
+                    accounts_grid.update()
+                    clear_form()
+
+                ui.button("Save", icon="save", on_click=add_account)
+                ui.button("Cancel", icon="close", on_click=dialog.close)
+                ui.button("Clear", icon="delete_outline", on_click=clear_form)

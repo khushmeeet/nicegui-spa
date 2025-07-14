@@ -35,7 +35,7 @@ def journal():
             "pagination": True,
             "paginationAutoPageSize": True,
         },
-    ).classes("w-full").style("height: 89vh;")
+    ).classes("w-full").style("height: calc(100vh - 160px);")
 
     if right_drawer and right_drawer_rendered_by != "journal":
         app.storage.client["right_drawer_rendered_by"] = "journal"

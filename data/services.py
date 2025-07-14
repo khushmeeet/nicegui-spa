@@ -9,7 +9,8 @@ def get_all_account_balance_series(accounts_df: pd.DataFrame, trades_df: pd.Data
         a1_df = trades_df[trades_df["account_name"] == acc_name].copy()
         a1_df_sorted = a1_df.sort_values(by=["exit_time"])
         series = [[x.timestamp() * 1000, y] for x, y in zip(a1_df_sorted["exit_time"], a1_df_sorted["ending_balance"])]
-        all_series.append({"name": acc_name, "data": series})
+        if len(series) > 0:
+            all_series.append({"name": acc_name, "data": series})
     return all_series
 
 
