@@ -1,5 +1,5 @@
+import pprint
 from enum import Enum
-from typing import List
 from nicegui import ui, app
 
 from utils.tree import build_tree
@@ -31,26 +31,23 @@ async def trading():
     }
     grouping_list = list(tree_enum_mapping.keys())
 
-    state = {"symbols_grid_visible": False, "trade_items": [], "common_sl_pips": 15.0, "common_tp_pips": 15.0}
+    state = {
+        "symbols_grid_visible": False,
+        "trade_items": [],
+        "common_sl_pips": 15.0,
+        "common_tp_pips": 15.0,
+        "selected_accounts": set(),
+    }
 
     ui.markdown("## 🏦 Trading")
-
-    ui.add_head_html(
-        """
-        <style>
-            .strike-through {
-                text-decoration: line-through;
-            }
-            .no-strike-through {
-                text-decoration: none;
-            }
-        </style>
-    """
-    )
 
     with ui.splitter(value=27) as splitter:
         with splitter.before:
             with ui.column().classes("w-full pr-4 pb-4"):
+
+                def add_account_tree_to_state(e):
+                    for value in e.value:
+                        state["selected_accounts"].add(value)
 
                 grouping_select = ui.select(grouping_list, multiple=True, label="Grouping", with_input=True, clearable=True, value=grouping_list[:2]).props("outlined use-chips").classes("w-full")
                 with grouping_select.add_slot("prepend"):
@@ -66,6 +63,7 @@ async def trading():
                         build_tree(accounts_df, grouping_list[:2], enum_mapping=tree_enum_mapping, ungroup_keys=grouping_list[-1]),
                         label_key="label",
                         tick_strategy="leaf",
+                        on_tick=add_account_tree_to_state,
                     )
                     .classes("w-full")
                     .expand()
@@ -99,12 +97,8 @@ async def trading():
                         ui.icon("psychology")
                 with ui.expansion("Common", icon="join_inner", value=True).classes(" w-full border p-0"):
                     with ui.row().classes("w-full"):
-                        sl_pips = (
-                            ui.number(label="Stop Loss (pips)", value=15.0, step=0.1, min=5.0, precision=1, format="%.1f").props("outlined").classes("w-64").bind_value_to(state, "common_sl_pips")
-                        )
-                        tp_pips = (
-                            ui.number(label="Take Profit (pips)", value=15.0, step=0.1, min=5.0, precision=1, format="%.1f").props("outlined").classes("w-64").bind_value_to(state, "common_tp_pips")
-                        )
+                        sl_pips = ui.number(label="Stop Loss (pips)", value=15.0, step=0.1, min=5.0, precision=1, format="%.1f").props("outlined").classes("w-64")
+                        tp_pips = ui.number(label="Take Profit (pips)", value=15.0, step=0.1, min=5.0, precision=1, format="%.1f").props("outlined").classes("w-64")
                         direction = ui.select(trade_direction_types, value=trade_direction_types[0], label="Direction", with_input=True, clearable=True).props("outlined").classes("w-64")
                         order_type = ui.select(trade_order_types, value=trade_order_types[0], label="Order Type", with_input=True, clearable=True).props("outlined").classes("w-64")
                         direction_currency = ui.select([p.value for p in CurrencyType], label="Direction based on currency", with_input=True, clearable=True).props("outlined").classes("w-64")
@@ -125,7 +119,7 @@ async def trading():
                     ui.icon("monetization_on")
 
                 with ui.row().classes("w-full justify-end"):
-                    ui.button("Execute", icon="rocket_launch").bind_visibility_from(state, "symbols_grid_visible")
+                    execute_btn = ui.button("Execute", icon="rocket_launch").bind_visibility_from(state, "symbols_grid_visible")
 
                 symbols_grid = (
                     ui.aggrid(
@@ -151,8 +145,8 @@ async def trading():
                                     ":valueFormatter": "p=>p.value.toFixed(2)",
                                     "editable": True,
                                     "cellClassRules": {
-                                        "strike-through": f"x*{state['common_sl_pips']} != data['sl_pips']",
-                                        "no-strike-through": f"x*{state['common_sl_pips']} == data['sl_pips']",
+                                        "line-through": "((x * data['common_sl_pips']) != data['sl_pips']) || ((x * data['common_tp_pips']) != data['tp_pips'])",
+                                        "no-underline": "((x * data['common_sl_pips']) == data['sl_pips']) && ((x * data['common_tp_pips']) == data['tp_pips'])",
                                     },
                                 },
                                 {"headerName": "SL pips", "field": "sl_pips", ":valueFormatter": "p=>p.value.toFixed(1)", "editable": True},
@@ -160,6 +154,8 @@ async def trading():
                                 {"headerName": "RR", "field": "rr", ":valueFormatter": "p=>p.value.toFixed(2)", "cellClassRules": {"bg-red-200": "x < 1.0", "bg-transparent": "x >= 1.0"}},
                                 {"headerName": "Lots(~)", "field": "lots", ":valueFormatter": "p=>p.value.toFixed(2)"},
                                 {"headerName": "Net Risk", "field": "net_risk", ":valueFormatter": "p=>p.value.toFixed(2)"},
+                                {"headerName": "Common SL pips", "field": "common_sl_pips", ":valueFormatter": "p=>p.value.toFixed(1)", "hide": True},
+                                {"headerName": "Common TP pips", "field": "common_tp_pips", ":valueFormatter": "p=>p.value.toFixed(1)", "hide": True},
                             ],
                             ":getRowId": "(params) => params.data.symbol",
                             "rowData": state["trade_items"],
@@ -171,60 +167,72 @@ async def trading():
                 )
 
                 def on_instruments_change(e):
-                    if len(e.value) > len(state["trade_items"]):
-                        new_symbol = list(set(e.value) - set([item["symbol"] for item in state["trade_items"]]))
-                        new_row_data = {
-                            "symbol": new_symbol[0],
-                            "risk": 1,
-                            "direction": direction.value,
-                            "order_type": order_type.value,
-                            "entry_price": 0,
-                            "sl_tp_factor": 1,
-                            "sl_pips": sl_pips.value,
-                            "tp_pips": tp_pips.value,
-                            "lots": 0.25,
-                            "net_risk": 0,
-                            "rr": tp_pips.value / sl_pips.value,
-                        }
-                        symbols_grid.run_grid_method("applyTransaction", {"add": [new_row_data]})
-                        state["trade_items"].append(new_row_data)
-                    else:
-                        deleted_symbol = list(set([item["symbol"] for item in state["trade_items"]]) - set(e.value))
-                        deleted_symbol_row_data = list(filter(lambda item: item["symbol"] in deleted_symbol, state["trade_items"]))
-                        symbols_grid.run_grid_method("applyTransaction", {"remove": deleted_symbol_row_data})
-                        rowData = list(filter(lambda item: item["symbol"] not in deleted_symbol, state["trade_items"]))
-                        state["trade_items"] = rowData
+                    selected_symbols = e.value or []
+                    existing_symbols = [item["symbol"] for item in state["trade_items"]]
+                    new_symbols = list(set(selected_symbols) - set(existing_symbols))
+                    for symbol in new_symbols:
+                        state["trade_items"].append(
+                            {
+                                "symbol": symbol,
+                                "risk": 1,
+                                "direction": direction.value,
+                                "order_type": order_type.value,
+                                "entry_price": 0,
+                                "sl_tp_factor": 1,
+                                "sl_pips": sl_pips.value,
+                                "tp_pips": tp_pips.value,
+                                "lots": 0.25,
+                                "net_risk": 0,
+                                "rr": tp_pips.value / sl_pips.value,
+                                "common_sl_pips": sl_pips.value,
+                                "common_tp_pips": tp_pips.value,
+                            }
+                        )
 
-                    if len(e.value) > 0:
-                        per_symbol_risk = risk.value / len(e.value)
-                        for i, row in enumerate(state["trade_items"]):
-                            state["trade_items"][i]["risk"] = per_symbol_risk
-                            symbols_grid.run_row_method(row["symbol"], "setDataValue", "risk", per_symbol_risk)
+                    deleted_symbols = list(set(existing_symbols) - set(selected_symbols))
 
-                    state["symbols_grid_visible"] = True if len(e.value) > 0 else False
+                    if deleted_symbols:
+                        deleted_rows = [item for item in state["trade_items"] if item["symbol"] in deleted_symbols]
+                        state["trade_items"] = [item for item in state["trade_items"] if item["symbol"] not in deleted_symbols]
+                        symbols_grid.run_grid_method("applyTransaction", {"remove": deleted_rows})
 
-                symbols_select.on_value_change(on_instruments_change)
+                    if new_symbols:
+                        new_rows = [item for item in state["trade_items"] if item["symbol"] in new_symbols]
+                        symbols_grid.run_grid_method("applyTransaction", {"add": new_rows})
+
+                    if len(state["trade_items"]) == 0:
+                        symbols_grid.options["rowData"] = state["trade_items"]
+                        symbols_grid.update()
+
+                    state["symbols_grid_visible"] = True if len(state["trade_items"]) > 0 else False
 
                 def on_sl_pips_change(e):
+                    state["common_sl_pips"] = e.value
                     if len(state["trade_items"]) > 0:
                         for i, ti in enumerate(state["trade_items"]):
                             new_row_sl_pips = ti["sl_tp_factor"] * e.value
                             new_row_rr = ti["tp_pips"] / new_row_sl_pips
                             symbols_grid.run_row_method(ti["symbol"], "setDataValue", "sl_pips", new_row_sl_pips)
+                            symbols_grid.run_row_method(ti["symbol"], "setDataValue", "common_sl_pips", e.value)
                             symbols_grid.run_row_method(ti["symbol"], "setDataValue", "rr", new_row_rr)
                             state["trade_items"][i]["sl_pips"] = new_row_sl_pips
+                            state["trade_items"][i]["common_sl_pips"] = e.value
                             state["trade_items"][i]["rr"] = new_row_rr
+                    symbols_grid.run_grid_method("refreshCells", {"force": True, "columns": ["sl_tp_factor"]})
 
                 def on_tp_pips_change(e):
+                    state["common_tp_pips"] = e.value
                     if len(state["trade_items"]) > 0:
                         for i, ti in enumerate(state["trade_items"]):
                             new_row_tp_pips = ti["sl_tp_factor"] * e.value
                             new_row_rr = new_row_tp_pips / ti["sl_pips"]
-                            print(new_row_tp_pips, ti["sl_pips"], round(new_row_rr, 2))
                             symbols_grid.run_row_method(ti["symbol"], "setDataValue", "tp_pips", new_row_tp_pips)
+                            symbols_grid.run_row_method(ti["symbol"], "setDataValue", "common_tp_pips", e.value)
                             symbols_grid.run_row_method(ti["symbol"], "setDataValue", "rr", new_row_rr)
                             state["trade_items"][i]["tp_pips"] = new_row_tp_pips
+                            state["trade_items"][i]["common_tp_pips"] = e.value
                             state["trade_items"][i]["rr"] = new_row_rr
+                    symbols_grid.run_grid_method("refreshCells", {"force": True, "columns": ["sl_tp_factor"]})
 
                 def order_type_change(e):
                     if len(state["trade_items"]) > 0:
@@ -299,18 +307,44 @@ async def trading():
                         if item:
                             item["entry_price"] = new_value
 
-                    symbols_grid.run_grid_method("refreshCells", {"force": True, "columns": ["sl_tp_factor"]})
+                    symbols_grid.run_grid_method("refreshCells", {"force": True})
 
-                def on_grid_row_value_changed(e):
-                    print("Row value changed:", e.value, e.data)
+                def execute_trades():
+                    pprint.pp(state["selected_accounts"])
+                    pprint.pp(state["trade_items"])
 
+                    # cleanup
+                    state["trade_items"] = []
+                    state["trade_items"].clear()
+                    state["selected_accounts"] = set()
+                    state["symbols_grid_visible"] = False
+                    state["common_sl_pips"] = 15
+                    state["common_tp_pips"] = 15
+                    symbols_select.on_value_change(None)
+                    symbols_select.set_value([])
+                    symbols_select.on_value_change(on_instruments_change)
+                    symbols_grid.options["rowData"] = state["trade_items"]
+                    symbols_grid.update()
+                    sl_pips.set_value(15)
+                    tp_pips.set_value(15)
+                    order_type.set_value("Market")
+                    direction.set_value("Long")
+                    direction_currency.set_value("")
+                    strategy.set_value("")
+                    probability.set_value("")
+                    mindstate.set_value("")
+                    risk.set_value(1)
+                    account_tree.untick()
+
+                symbols_select.on_value_change(lambda e: ui.timer(0.5, lambda: on_instruments_change(e), once=True))
+                # symbols_select.on_value_change(on_instruments_change)
                 sl_pips.on_value_change(on_sl_pips_change)
                 tp_pips.on_value_change(on_tp_pips_change)
                 order_type.on_value_change(order_type_change)
                 direction.on_value_change(on_direction_change)
                 direction_currency.on_value_change(on_change_direction_currency)
                 symbols_grid.on("cellValueChanged", on_grid_cell_value_changed)
-                symbols_grid.on("rowValueChanged", on_grid_row_value_changed)
+                execute_btn.on_click(execute_trades)
 
     # if right_drawer and right_drawer_rendered_by != "trading":
     #     app.storage.client["right_drawer_rendered_by"] = "trading"
