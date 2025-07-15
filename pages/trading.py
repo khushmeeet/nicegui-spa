@@ -39,6 +39,17 @@ async def trading():
         "selected_accounts": set(),
     }
 
+    ui.add_css(
+        """
+    .custom-tooltip {
+        white-space: normal;
+        padding: 5px;
+        background-color: #f9f9f9;
+        border: 1px solid #ccc;
+    }
+    """
+    )
+
     ui.markdown("## 🏦 Trading")
 
     with ui.splitter(value=27) as splitter:
@@ -152,13 +163,20 @@ async def trading():
                                 {"headerName": "SL pips", "field": "sl_pips", ":valueFormatter": "p=>p.value.toFixed(1)", "editable": True},
                                 {"headerName": "TP pips", "field": "tp_pips", ":valueFormatter": "p=>p.value.toFixed(1)", "editable": True},
                                 {"headerName": "RR", "field": "rr", ":valueFormatter": "p=>p.value.toFixed(2)", "cellClassRules": {"bg-red-200": "x < 1.0", "bg-transparent": "x >= 1.0"}},
-                                {"headerName": "Lots(~)", "field": "lots", ":valueFormatter": "p=>p.value.toFixed(2)"},
-                                {"headerName": "Net Risk", "field": "net_risk", ":valueFormatter": "p=>p.value.toFixed(2)"},
+                                {
+                                    "headerName": "Total Lots",
+                                    "field": "lots",
+                                    ":tooltipValueGetter": "p=>p.data['lots_per_account']",
+                                },
+                                {"headerName": "Total Risk", "field": "net_risk", ":valueFormatter": "p=>p.value.toFixed(2)"},
                                 {"headerName": "Common SL pips", "field": "common_sl_pips", ":valueFormatter": "p=>p.value.toFixed(1)", "hide": True},
                                 {"headerName": "Common TP pips", "field": "common_tp_pips", ":valueFormatter": "p=>p.value.toFixed(1)", "hide": True},
+                                {"headerName": "Lots per Account", "field": "lots_per_account", "hide": True},
                             ],
                             ":getRowId": "(params) => params.data.symbol",
                             "rowData": state["trade_items"],
+                            "tooltipShowDelay": 500,
+                            "tooltipHideDelay": 2000,
                         },
                     )
                     .bind_visibility_from(state, "symbols_grid_visible")
@@ -170,6 +188,11 @@ async def trading():
                     selected_symbols = e.value or []
                     existing_symbols = [item["symbol"] for item in state["trade_items"]]
                     new_symbols = list(set(selected_symbols) - set(existing_symbols))
+
+                    lots = []
+                    for i, account in enumerate(state["selected_accounts"]):
+                        lots.append(i / 100)
+
                     for symbol in new_symbols:
                         state["trade_items"].append(
                             {
@@ -181,11 +204,12 @@ async def trading():
                                 "sl_tp_factor": 1,
                                 "sl_pips": sl_pips.value,
                                 "tp_pips": tp_pips.value,
-                                "lots": 0.25,
+                                "lots": sum(lots),
                                 "net_risk": 0,
                                 "rr": tp_pips.value / sl_pips.value,
                                 "common_sl_pips": sl_pips.value,
                                 "common_tp_pips": tp_pips.value,
+                                "lots_per_account": ", ".join([f"{x}:{y}" for x, y in zip(list(state["selected_accounts"]), lots)]),
                             }
                         )
 
