@@ -32,49 +32,36 @@ async def trading():
     grouping_list = list(tree_enum_mapping.keys())
 
     state = {
-        "symbols_grid_visible": False,
         "trade_items": [],
         "common_sl_pips": 15.0,
         "common_tp_pips": 15.0,
         "selected_accounts": set(),
+        "direction_currency": "",
     }
-
-    ui.add_css(
-        """
-    .custom-tooltip {
-        white-space: normal;
-        padding: 5px;
-        background-color: #f9f9f9;
-        border: 1px solid #ccc;
-    }
-    """
-    )
 
     ui.markdown("## 🏦 Trading")
 
     with ui.splitter(value=27) as splitter:
+        with splitter.separator:
+            ui.icon("drag_indicator", size="1.5em").classes("text-grey-13")
         with splitter.before:
             with ui.column().classes("w-full pr-4 pb-4"):
-
-                def add_account_tree_to_state(e):
-                    for value in e.value:
-                        state["selected_accounts"].add(value)
-
                 grouping_select = ui.select(grouping_list, multiple=True, label="Grouping", with_input=True, clearable=True, value=grouping_list[:2]).props("outlined use-chips").classes("w-full")
                 with grouping_select.add_slot("prepend"):
                     ui.icon("account_tree")
-
                 with ui.row().classes("w-full justify-between items-center"):
                     ui.label("Select Account(s)")
                     with ui.button_group().props("flat").classes("bg-grey-2 text-grey-14"):
+                        tree_select_all_btn = ui.button(icon="select_all", color="text-grey-14").props("flat dense")
+                        tree_deselect_all_btn = ui.button(icon="deselect", color="text-grey-14").props("flat dense")
                         tree_expand_btn = ui.button(icon="add", color="text-grey-14").props("flat dense")
                         tree_collapse_btn = ui.button(icon="remove", color="text-grey-14").props("flat dense")
+
                 account_tree = (
                     ui.tree(
                         build_tree(accounts_df, grouping_list[:2], enum_mapping=tree_enum_mapping, ungroup_keys=grouping_list[-1]),
                         label_key="label",
                         tick_strategy="leaf",
-                        on_tick=add_account_tree_to_state,
                     )
                     .classes("w-full")
                     .expand()
@@ -130,7 +117,9 @@ async def trading():
                     ui.icon("monetization_on")
 
                 with ui.row().classes("w-full justify-end"):
-                    execute_btn = ui.button("Execute", icon="rocket_launch").bind_visibility_from(state, "symbols_grid_visible")
+                    execute_btn = (
+                        ui.button("Execute", icon="rocket_launch").bind_enabled_from(state, "trade_items", lambda x: len(x) > 0).bind_enabled_from(state, "selected_accounts", lambda x: len(x) > 0)
+                    )
 
                 symbols_grid = (
                     ui.aggrid(
@@ -166,6 +155,7 @@ async def trading():
                                 {
                                     "headerName": "Total Lots",
                                     "field": "lots",
+                                    ":valueFormatter": "p=>p.value.toFixed(2)",
                                     ":tooltipValueGetter": "p=>p.data['lots_per_account']",
                                 },
                                 {"headerName": "Total Risk", "field": "net_risk", ":valueFormatter": "p=>p.value.toFixed(2)"},
@@ -176,10 +166,8 @@ async def trading():
                             ":getRowId": "(params) => params.data.symbol",
                             "rowData": state["trade_items"],
                             "tooltipShowDelay": 500,
-                            "tooltipHideDelay": 2000,
                         },
                     )
-                    .bind_visibility_from(state, "symbols_grid_visible")
                     .classes("w-full")
                     .style("height: 480px")
                 )
@@ -187,18 +175,22 @@ async def trading():
                 def on_instruments_change(e):
                     selected_symbols = e.value or []
                     existing_symbols = [item["symbol"] for item in state["trade_items"]]
-                    new_symbols = list(set(selected_symbols) - set(existing_symbols))
+                    added_symbols = list(set(selected_symbols) - set(existing_symbols))
 
-                    lots = []
-                    for i, account in enumerate(state["selected_accounts"]):
-                        lots.append(i / 100)
+                    lots = [i / 100 for i in state["selected_accounts"]]
 
-                    for symbol in new_symbols:
+                    for symbol in added_symbols:
+                        mod_direction = direction.value
+                        quote = symbol[3:]
+                        if state["direction_currency"] not in ["", None] and state["direction_currency"] == quote:
+                            mod_direction = DirectionType.long if mod_direction == DirectionType.short else DirectionType.short
+
                         state["trade_items"].append(
                             {
+                                "id": symbol,
                                 "symbol": symbol,
                                 "risk": 1,
-                                "direction": direction.value,
+                                "direction": mod_direction,
                                 "order_type": order_type.value,
                                 "entry_price": 0,
                                 "sl_tp_factor": 1,
@@ -220,15 +212,13 @@ async def trading():
                         state["trade_items"] = [item for item in state["trade_items"] if item["symbol"] not in deleted_symbols]
                         symbols_grid.run_grid_method("applyTransaction", {"remove": deleted_rows})
 
-                    if new_symbols:
-                        new_rows = [item for item in state["trade_items"] if item["symbol"] in new_symbols]
+                    if added_symbols:
+                        new_rows = [item for item in state["trade_items"] if item["symbol"] in added_symbols]
                         symbols_grid.run_grid_method("applyTransaction", {"add": new_rows})
 
                     if len(state["trade_items"]) == 0:
                         symbols_grid.options["rowData"] = state["trade_items"]
                         symbols_grid.update()
-
-                    state["symbols_grid_visible"] = True if len(state["trade_items"]) > 0 else False
 
                 def on_sl_pips_change(e):
                     state["common_sl_pips"] = e.value
@@ -276,6 +266,7 @@ async def trading():
                             state["trade_items"][i]["direction"] = e.value
 
                 def on_change_direction_currency(e):
+                    state["direction_currency"] = e.value
                     if len(state["trade_items"]) > 0:
                         for i, ti in enumerate(state["trade_items"]):
                             if e.value in ["", None]:
@@ -333,15 +324,42 @@ async def trading():
 
                     symbols_grid.run_grid_method("refreshCells", {"force": True})
 
-                def execute_trades():
-                    pprint.pp(state["selected_accounts"])
-                    pprint.pp(state["trade_items"])
+                def on_tick_account_tree(e):
+                    accounts_ids = accounts_df.index.tolist()
+                    new_selection = set(filter(lambda x: x in accounts_ids, e.value))
+                    print(new_selection)
+                    state["selected_accounts"] = new_selection
+                    lots = [int(i) / 100 for i in state["selected_accounts"]]
+                    for item in state["trade_items"]:
+                        item["lots"] = sum(lots)
+                        item["lots_per_account"] = ", ".join([f"{x}:{y}" for x, y in zip(sorted(state["selected_accounts"]), lots)])
 
-                    # cleanup
+                    symbols_grid.run_grid_method("applyTransaction", {"update": state["trade_items"]})
+
+                def on_tick_all_account_tree(e):
+                    account_tree.tick()
+                    state["selected_accounts"] = set([int(i) for i in accounts_df.index.tolist()])
+                    lots = [i / 100 for i in state["selected_accounts"]]
+                    for item in state["trade_items"]:
+                        item["lots"] = sum(lots)
+                        item["lots_per_account"] = ", ".join([f"{x}:{y}" for x, y in zip(sorted(state["selected_accounts"]), lots)])
+
+                    symbols_grid.run_grid_method("applyTransaction", {"update": state["trade_items"]})
+
+                def on_untick_all_account_tree(e):
+                    account_tree.untick()
+                    state["selected_accounts"] = set()
+                    lots = [i / 100 for i in state["selected_accounts"]]
+                    for item in state["trade_items"]:
+                        item["lots"] = sum(lots)
+                        item["lots_per_account"] = ", ".join([f"{x}:{y}" for x, y in zip(sorted(state["selected_accounts"]), lots)])
+
+                    symbols_grid.run_grid_method("applyTransaction", {"update": state["trade_items"]})
+
+                def cleanup():
                     state["trade_items"] = []
                     state["trade_items"].clear()
                     state["selected_accounts"] = set()
-                    state["symbols_grid_visible"] = False
                     state["common_sl_pips"] = 15
                     state["common_tp_pips"] = 15
                     symbols_select.on_value_change(None)
@@ -360,8 +378,16 @@ async def trading():
                     risk.set_value(1)
                     account_tree.untick()
 
-                symbols_select.on_value_change(lambda e: ui.timer(0.5, lambda: on_instruments_change(e), once=True))
-                # symbols_select.on_value_change(on_instruments_change)
+                def execute_trades():
+                    pprint.pp(state["selected_accounts"])
+                    pprint.pp(state["trade_items"])
+
+                    cleanup()
+
+                symbols_select.on_value_change(lambda e: ui.timer(0.3, lambda: on_instruments_change(e), once=True))
+                account_tree.on_tick(on_tick_account_tree)
+                tree_select_all_btn.on_click(on_tick_all_account_tree)
+                tree_deselect_all_btn.on_click(on_untick_all_account_tree)
                 sl_pips.on_value_change(on_sl_pips_change)
                 tp_pips.on_value_change(on_tp_pips_change)
                 order_type.on_value_change(order_type_change)
