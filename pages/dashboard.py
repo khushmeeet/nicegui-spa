@@ -31,8 +31,9 @@ def dashboard():
     #         ui.label("Metric 1")
     #     with ui.card().classes("h-32 w-64"):
     #         ui.label("Metric 1")
+    #
+    # ui.separator().classes("mb-5")
 
-    ui.separator().classes("mb-5")
     with ui.row().classes("w-full justify-between mb-4"):
         with ui.dropdown_button("Select Accounts(s)", icon="business_center"):
             with ui.column().classes("w-full p-4"):
@@ -70,14 +71,19 @@ def dashboard():
         ui.toggle(["Value", "Percent"])
 
     with ui.row().classes("mb-2"):
-        with ui.grid(columns=7, rows=1):
+        with ui.grid(columns=7, rows=1).classes("mr-5"):
             for weekday in WEEKDAYS:
-                ui.label(weekday).classes("text-md w-32")
-    with ui.row():
-        with ui.grid(columns=7, rows=6):
+                ui.label(weekday).classes("text-md w-32 pl-2")
+        ui.label("Week").classes("text-md w-32 pl-2")
+    with ui.row().classes("w-full"):
+        with ui.grid(columns=7, rows=6).classes("mr-5"):
             for i in range(1, 36):
                 with ui.card().classes("h-32 w-32"):
                     ui.label(f"Day {i}")
+        with ui.grid(columns=1, rows=6):
+            for i in range(1, 6):
+                with ui.card().classes("h-32 w-32"):
+                    ui.label(f"Week {i}")
 
     if right_drawer and right_drawer_rendered_by != "dashboard":
         right_drawer.clear()
