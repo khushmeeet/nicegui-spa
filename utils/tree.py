@@ -15,7 +15,7 @@ def build_tree(df: pd.DataFrame, group_keys: list, path_parts: list = [], enum_m
 
     if group_keys == []:
         leaves = []
-        for _, row in df.reset_index().iterrows():
+        for index, row in df.iterrows():
             label_parts = [row["Name"], row["Login"]]
             for key in ungroup_keys:
                 if key in row and pd.notna(row[key]):
@@ -24,10 +24,7 @@ def build_tree(df: pd.DataFrame, group_keys: list, path_parts: list = [], enum_m
                     label_parts.append(value)
             label = " ".join(label_parts)
 
-            leaf = {
-                "label": label,
-                "id": row["ID"],
-            }
+            leaf = {"label": label, "id": index}
             leaves.append(leaf)
 
         if is_root:

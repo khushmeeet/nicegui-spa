@@ -69,6 +69,8 @@ def dashboard():
                 grouping_select.on_value_change(on_grouping_change)
                 tree_expand_btn.on_click(account_tree.expand)
                 tree_collapse_btn.on_click(account_tree.collapse)
+                tree_select_all_btn.on_click(account_tree.tick)
+                tree_deselect_all_btn.on_click(account_tree.untick)
 
         ui.toggle(["Value", "Percent"])
 

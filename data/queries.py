@@ -1,5 +1,6 @@
 import sys
 import os
+from functools import lru_cache
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -51,7 +52,7 @@ def get_all_items_from_trade() -> pd.DataFrame:
                     "exit_reason": t.exit_reason,
                     "backtested": bool(t.validated_from_backtest),
                     "account_id": t.account_id,
-                    "account_currency": t.account.currency,
+                    "account_currency": str(t.account.currency),
                 }
             )
 

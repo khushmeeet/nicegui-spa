@@ -169,7 +169,7 @@ async def trading():
                         },
                     )
                     .classes("w-full")
-                    .style("height: 480px")
+                    .style("height: 400px")
                 )
 
                 def on_instruments_change(e):
@@ -327,7 +327,6 @@ async def trading():
                 def on_tick_account_tree(e):
                     accounts_ids = accounts_df.index.tolist()
                     new_selection = set(filter(lambda x: x in accounts_ids, e.value))
-                    print(new_selection)
                     state["selected_accounts"] = new_selection
                     lots = [int(i) / 100 for i in state["selected_accounts"]]
                     for item in state["trade_items"]:
