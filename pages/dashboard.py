@@ -6,6 +6,7 @@ from utils.case_converter import title_to_snake
 from utils.tree import build_tree
 
 WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 
 def dashboard():
@@ -68,6 +69,7 @@ def dashboard():
                 grouping_select.on_value_change(on_grouping_change)
                 tree_expand_btn.on_click(account_tree.expand)
                 tree_collapse_btn.on_click(account_tree.collapse)
+
         ui.toggle(["Value", "Percent"])
 
     with ui.row().classes("mb-2"):

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from models import Account, Broker, Instrument, Trade
+from models.enums import DirectionType, OrderType
 from db.get_session import get_session
 from utils.case_converter import snake_to_title
 
@@ -23,31 +24,48 @@ def get_all_items_from_trade() -> pd.DataFrame:
         for t in trades:
             trade_dicts.append(
                 {
-                    "id": t.id,
-                    "trade_id": t.trade_id,
+                    "id": int(t.id),
+                    "trade_id": int(t.trade_id),
                     "status": t.status.name,
-                    "risk": t.risk,
+                    "risk": float(t.risk),
                     "direction": t.direction.name,
                     "order_type": t.order_type.name,
-                    "lots": t.lots,
-                    "entry_price": t.entry_price,
-                    "exit_price": t.exit_price,
+                    "lots": float(t.lots),
+                    "entry_price": float(t.entry_price),
+                    "exit_price": float(t.exit_price),
                     "open_time": t.open_time,
                     "exit_time": t.exit_time,
-                    "duration": t.duration.total_seconds() if t.duration else None,
-                    "actual_pnl": t.actual_pnl,
+                    "duration": int(t.duration.total_seconds()),
+                    "actual_pnl": float(t.actual_pnl),
+                    "actual_rr": float(t.actual_reward_risk),
                     "account_name": t.account.name if t.account else None,
                     "account_broker": t.account.broker.name if t.account else "None",
-                    "symbol": t.symbol.id,
+                    "symbol": t.symbol.symbol,
                     "instrument": t.instrument.id,
                     "strategy": t.strategy.name if t.strategy else None,
-                    "starting_balance": t.starting_balance,
-                    "ending_balance": t.ending_balance,
+                    "starting_balance": float(t.starting_balance),
+                    "ending_balance": float(t.ending_balance),
+                    "probability": t.probability,
+                    "mindstate": t.mindstate,
+                    "stop_loss_pips": float(t.stop_loss_pips),
+                    "exit_reason": t.exit_reason,
+                    "backtested": bool(t.validated_from_backtest),
+                    "account_id": t.account_id,
+                    "account_currency": t.account.currency,
                 }
             )
 
         df = pd.DataFrame(trade_dicts)
         df.set_index("id", inplace=True)
+        df.sort_values("exit_time", inplace=True, ascending=False)
+        df["order_type"] = df["order_type"].apply(lambda x: snake_to_title(x))
+        df["direction_html"] = df["direction"].apply(
+            lambda x: f'<span class="bg-{'blue' if snake_to_title(x) == DirectionType.long else 'amber'}-200 rounded-full py-1 px-3">{snake_to_title(x)}</span>'
+        )
+        df["order_type_html"] = df["order_type"].apply(
+            lambda x: f'<span class="bg-{'pink' if snake_to_title(x) == OrderType.market else 'cyan' if snake_to_title(x) == OrderType.limit else 'orange'}-200 rounded-full py-1 px-3">{snake_to_title(x)}</span>'
+        )
+        df["win_loss_html"] = df["actual_pnl"].apply(lambda x: f'<span class="bg-{'emerald' if x>0 else 'rose'}-300 rounded-full py-1 px-3">{"Win" if x >0 else "Loss"}</span>')
         return df
 
 

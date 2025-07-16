@@ -79,7 +79,7 @@ async def trading():
                 tree_collapse_btn.on_click(account_tree.collapse)
 
         with splitter.after:
-            with ui.column().classes("w-full pl-4 pb-4"):
+            with ui.column().classes("w-full pl-4 pb-4 pr-2"):
                 with ui.row():
                     strategy = ui.select(strategies_df["name"].to_list(), label="Strategy", with_input=True, clearable=True).props("outlined").classes("w-64")
                     risk = ui.number(label="Trade Risk", value=1.0, step=0.01, min=0.1, max=5.0, precision=3, format="%.2f").props("outlined").classes("w-64")
