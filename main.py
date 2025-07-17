@@ -12,7 +12,7 @@ from right_drawer import right_drawer
 from pages import pages
 from models import Strategy, Symbol, Broker
 
-from data.queries import get_all_items_from_account, get_all_items_from_trade, get_all_items_from_table
+from data.queries import get_all_items_from_account, get_all_items_from_trade, get_all_items_from_table, get_all_instruments
 
 
 @ui.page("/")
@@ -30,6 +30,7 @@ def main(path: str = None):
     app.storage.client["strategies_df"] = get_all_items_from_table(Strategy, ["id", "name", "description", "tag"])
     app.storage.client["symbols_df"] = get_all_items_from_table(Symbol, ["id", "symbol", "description", "type", "sector", "industry", "country", "currency", "exchange"])
     app.storage.client["brokers_df"] = get_all_items_from_table(Broker, ["id", "name"])
+    app.storage.client["instruments_df"] = get_all_instruments()
 
     app.storage.client["active_page"] = path.strip("/") if path.strip("/") else "dashboard"
 

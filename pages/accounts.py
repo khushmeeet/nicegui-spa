@@ -51,6 +51,7 @@ async def accounts():
     trades_df = app.storage.client["trades_df"]
     trades_df["year"] = trades_df["exit_time"].dt.year
     symbols_df = app.storage.client["symbols_df"]
+    instruments_df = app.storage.client["instruments_df"]
 
     state = {
         "account_selected": accounts_df["name"].iloc[0],
@@ -207,5 +208,28 @@ async def accounts():
                         {"headerName": "Exchange", "field": "path", "filter": "agTextColumnFilter"},
                     ],
                     "rowData": symbols_df.to_dict("records"),
+                },
+            )
+
+        with ui.row().classes("w-full items-center justify-between mt-4"):
+            ui.label("💱 All Instruments").classes("text-2xl")
+
+        with ui.row().classes("w-full"):
+            instruments_grid = ui.aggrid(
+                options={
+                    "defaultColDef": {"resizable": True},
+                    "rowSelection": "single",
+                    "columnDefs": [
+                        {"headerName": "Ticker", "field": "ticker", "checkboxSelection": True, "filter": "agTextColumnFilter"},
+                        {"headerName": "Symbol", "field": "symbol", "filter": "agTextColumnFilter"},
+                        {"headerName": "Account Name", "field": "account_name", "filter": "agTextColumnFilter"},
+                        {"headerName": "Broker", "field": "account_broker", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Sector", "field": "type", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Industry", "field": "login", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Country", "field": "platform", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Currency", "field": "server", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Exchange", "field": "path", "filter": "agTextColumnFilter"},
+                    ],
+                    "rowData": instruments_df.to_dict("records"),
                 },
             )

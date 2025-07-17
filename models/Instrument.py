@@ -19,7 +19,7 @@ class Instrument(Base):
     # standard_symbol = relationship("Symbol", back_populates="instruments")
 
     account_id = Column(Integer, ForeignKey("accounts.id"))
-    account = relationship("Account", backref="instruments")
+    # account = relationship("Account", backref="instruments")
 
     suffix_id = Column(Integer, ForeignKey("suffixes.id"))
     suffix = relationship("Suffix", backref="instruments")

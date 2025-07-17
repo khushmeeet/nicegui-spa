@@ -1,6 +1,5 @@
 import sys
 import os
-from functools import lru_cache
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -18,23 +17,34 @@ from utils.case_converter import snake_to_title
 
 def get_all_instruments() -> pd.DataFrame:
     with get_session() as session:
-        stmt = select(Instrument).options(joinedload(Instrument.account))
-        result = session.execute(stmt)
-        instruments = result.scalars().all()
-        instrument_dicts = []
-        for i in instruments:
-            instrument_dicts.append(
+        instruments = session.query(Instrument).options(joinedload(Instrument.account).joinedload(Account.broker), joinedload(Instrument.symbol)).all()
+
+        data = []
+        for inst in instruments:
+            acc = inst.account
+            data.append(
                 {
-                    "id": i.id,
-                    "ticker": i.ticker,
-                    "account_name": i.account.name,
-                    "account_broker": i.account.broker.name,
-                    "account_currency": i.account.currency,
+                    "instrument_id": inst.id,
+                    "ticker": inst.ticker,
+                    "description": inst.description,
+                    "symbol_id": inst.symbol_id,
+                    "symbol": inst.symbol.symbol,
+                    "account_id": inst.account_id,
+                    "lot_size": inst.lot_size,
+                    "leverage": inst.leverage,
+                    "min_volume": inst.min_volume,
+                    "max_volume": inst.max_volume,
+                    "step_volume": inst.step_volume,
+                    "account_name": acc.name if acc else None,
+                    "account_login": acc.login if acc else None,
+                    "account_platform": acc.platform.name if acc else None,
+                    "account_currency": acc.currency.name if acc and acc.currency else None,
+                    "account_current_balance": acc.current_balance if acc else None,
+                    "account_broker": acc.broker.name,
                 }
             )
 
-        df = pd.DataFrame(instrument_dicts)
-        return df
+        return pd.DataFrame(data)
 
 
 def get_all_items_from_trade() -> pd.DataFrame:
