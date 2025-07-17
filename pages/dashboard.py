@@ -1,9 +1,6 @@
-from enum import Enum
 from nicegui import ui, app
 
-from models.enums import AccountType, PlatformType
-from utils.case_converter import title_to_snake
-from utils.tree import build_tree
+from utils.tree import build_tree, get_mapping_and_grouping_list
 
 WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
@@ -15,17 +12,7 @@ def dashboard():
     brokers_df = app.storage.client["brokers_df"]
     accounts_df = app.storage.client["accounts_df"]
 
-    # Refactor these two variables to separate file as these are used in multiple pages
-    tree_enum_mapping = {
-        "Type": AccountType,
-        "Broker": Enum(
-            "BrokerType",
-            {title_to_snake(item): item for item in brokers_df["name"].tolist()},
-            type=str,
-        ),
-        "Platform": PlatformType,
-    }
-    grouping_list = list(tree_enum_mapping.keys())
+    tree_enum_mapping, grouping_list = get_mapping_and_grouping_list(brokers_df)
 
     # with ui.row().classes("mb-5"):
     #     with ui.card().classes("h-32 w-64"):

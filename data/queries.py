@@ -16,6 +16,27 @@ from db.get_session import get_session
 from utils.case_converter import snake_to_title
 
 
+def get_all_instruments() -> pd.DataFrame:
+    with get_session() as session:
+        stmt = select(Instrument).options(joinedload(Instrument.account))
+        result = session.execute(stmt)
+        instruments = result.scalars().all()
+        instrument_dicts = []
+        for i in instruments:
+            instrument_dicts.append(
+                {
+                    "id": i.id,
+                    "ticker": i.ticker,
+                    "account_name": i.account.name,
+                    "account_broker": i.account.broker.name,
+                    "account_currency": i.account.currency,
+                }
+            )
+
+        df = pd.DataFrame(instrument_dicts)
+        return df
+
+
 def get_all_items_from_trade() -> pd.DataFrame:
     with get_session() as session:
         stmt = select(Trade).options(joinedload(Trade.account), joinedload(Trade.symbol), joinedload(Trade.instrument), joinedload(Trade.strategy))
@@ -98,29 +119,29 @@ def get_all_items_from_account() -> pd.DataFrame:
         for acc in accounts:
             data.append(
                 {
-                    "ID": acc.id,
-                    "Name": acc.name,
-                    "Broker": acc.broker,
-                    "Currency": acc.currency,
-                    "Login": acc.login,
-                    "Type": acc.type,
-                    "Platform": acc.platform,
-                    "Server": acc.server,
-                    "Path": acc.path,
-                    "Instruments #": acc.instrument_count,
-                    "Starting Balance": round(acc.starting_balance, 2),
-                    "Current Balance": round(acc.current_balance, 2),
-                    "Archived": acc.archived,
+                    "id": acc.id,
+                    "name": acc.name,
+                    "broker": acc.broker,
+                    "currency": acc.currency,
+                    "login": acc.login,
+                    "type": acc.type,
+                    "platform": acc.platform,
+                    "server": acc.server,
+                    "path": acc.path,
+                    "instruments_count": acc.instrument_count,
+                    "starting_balance": round(acc.starting_balance, 2),
+                    "current_balance": round(acc.current_balance, 2),
+                    "archived": acc.archived,
                 }
             )
         df = pd.DataFrame(data)
-        try:
-            df.set_index(
-                "ID",
-                inplace=True,
-            )
-        except KeyError:
-            pass
+        # try:
+        #     df.set_index(
+        #         "id",
+        #         inplace=True,
+        #     )
+        # except KeyError:
+        #     pass
         return df
 
 

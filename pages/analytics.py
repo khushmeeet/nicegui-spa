@@ -12,7 +12,7 @@ def analytics():
     trades_df["year"] = trades_df["exit_time"].dt.year
     available_years = sorted(trades_df["year"].unique(), reverse=True)
     state = {
-        "account_selected": accounts_df["Name"].iloc[0],
+        "account_selected": accounts_df["name"].iloc[0],
     }
 
     def update_state(**kwargs):
@@ -42,7 +42,7 @@ def analytics():
             bar_chart.update()
 
         def on_account_selected(e):
-            update_state(account_selected=e.args["data"]["Name"])
+            update_state(account_selected=e.args["data"]["name"])
             update_account_charts(None)
 
         def update_account_charts(e):

@@ -1,10 +1,8 @@
 import pprint
-from enum import Enum
 from nicegui import ui, app
 
-from utils.tree import build_tree
-from utils.case_converter import title_to_snake
-from models.enums import TradeSuccessProbabilityType, TradingMindState, DirectionType, OrderType, CurrencyType, AccountType, PlatformType
+from utils.tree import build_tree, get_mapping_and_grouping_list
+from models.enums import TradeSuccessProbabilityType, TradingMindState, DirectionType, OrderType, CurrencyType
 
 
 MAX_SYMBOLS_PER_TRADE = 10
@@ -20,16 +18,7 @@ async def trading():
     trade_direction_types = [p.value for p in DirectionType]
     trade_order_types = [p.value for p in OrderType]
 
-    tree_enum_mapping = {
-        "Type": AccountType,
-        "Broker": Enum(
-            "BrokerType",
-            {title_to_snake(item): item for item in brokers_df["name"].tolist()},
-            type=str,
-        ),
-        "Platform": PlatformType,
-    }
-    grouping_list = list(tree_enum_mapping.keys())
+    tree_enum_mapping, grouping_list = get_mapping_and_grouping_list(brokers_df)
 
     state = {
         "trade_items": [],
