@@ -172,6 +172,8 @@ async def trading():
                     .style("height: 400px")
                 )
 
+                ui.editor(placeholder="Your trading notes here ...").classes("w-full h-64")
+
                 def on_instruments_change(e):
                     selected_symbols = e.value or []
                     existing_symbols = [item["symbol"] for item in state["trade_items"]]

@@ -90,6 +90,7 @@ def journal():
     grouping_list = list(tree_enum_mapping.keys())
 
     with ui.row().classes("w-full mb-4 items-center"):
+        ui.label("📄 Journal").classes("text-2xl")
         with ui.dropdown_button("Select Accounts(s)", icon="business_center"):
             with ui.column().classes("w-full p-4"):
                 grouping_select = ui.select(grouping_list, multiple=True, label="Grouping", with_input=True, clearable=True, value=grouping_list[0]).props("outlined use-chips").classes("w-full")
