@@ -1,4 +1,5 @@
 from enum import Enum
+import pandas as pd
 from nicegui import ui, app
 
 from models.enums import AccountType, PlatformType
@@ -7,18 +8,28 @@ from utils.case_converter import title_to_snake
 from utils.tree import build_tree
 
 DATE_FORMATTER = """
-(params) => {
-    const date = new Date(params.value);
-    const options = {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-    };
-    return date.toLocaleString('en-UK', options);
-}
+    (params) => {
+        const date = new Date(params.value);
+        const options = {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        };
+        return date.toLocaleString('en-UK', options);
+    }
+"""
+
+DATE_FILTER_COMPARATOR = """
+    (filterDate, cellValue) => {
+        const cellDate = new Date(cellValue);
+        const cellDateOnly = new Date(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
+        if (cellDateOnly < filterDate) return -1;
+        if (cellDateOnly > filterDate) return 1;
+        return 0;
+    }
 """
 
 DURATION_FORMATTER = """
@@ -47,11 +58,25 @@ def journal():
     trades_df = app.storage.client["trades_df"]
     brokers_df = app.storage.client["brokers_df"]
     accounts_df = app.storage.client["accounts_df"]
+    trades_df["open_time"] = pd.to_datetime(trades_df["open_time"], errors="coerce").dt.strftime("%Y-%m-%dT%H:%M:%S")
+    trades_df["exit_time"] = pd.to_datetime(trades_df["exit_time"], errors="coerce").dt.strftime("%Y-%m-%dT%H:%M:%S")
+    trades_df["id"] = trades_df.index
+
+    live_account_ids = set(accounts_df[accounts_df["Type"] == AccountType.live].index.tolist())
+    demo_account_ids = set(accounts_df[accounts_df["Type"] == AccountType.demo].index.tolist())
+
+    total_live_accounts_count = len(live_account_ids)
+    total_demo_accounts_count = len(demo_account_ids)
 
     state = {
         "selected_accounts": set(),
-        # "trades": trades_df.to_dict("records"),
+        "selected_accounts": set(accounts_df.index.tolist()),
+        "selected_live_accounts": set(accounts_df[accounts_df["Type"] == AccountType.live].index.tolist()),
+        "selected_demo_accounts": set(accounts_df[accounts_df["Type"] == AccountType.demo].index.tolist()),
     }
+    state["selected_account_live_demo_label_text"] = (
+        f"Live: {len(state['selected_live_accounts'])}/{total_live_accounts_count} Demo: {len(state['selected_demo_accounts'])}/{total_demo_accounts_count}",
+    )
 
     tree_enum_mapping = {
         "Type": AccountType,
@@ -86,6 +111,7 @@ def journal():
                     )
                     .classes("w-full")
                     .expand()
+                    .tick()
                 )
 
                 def on_grouping_change(e):
@@ -101,29 +127,31 @@ def journal():
                 tree_select_all_btn.on_click(account_tree.tick)
                 tree_deselect_all_btn.on_click(account_tree.untick)
 
-        ui.label("Live: 3/10, Demo: 2/10").classes("text-grey-14")
+        ui.label().classes("text-grey-14").bind_text_from(state, "selected_account_live_demo_label_text")
         journal_clear_filter_btn = ui.button("Clear All Filters", icon="filter_list_off").props("outline flat")
 
     journal = (
-        ui.aggrid.from_pandas(
-            trades_df,
-            theme="quartz",
+        ui.aggrid(
+            # theme="quartz",
             options={
-                # "domLayout": "autoHeight",
                 "suppressHorizontalScroll": False,
                 "ensureDomOrder": True,
                 "defaultColDef": {"resizable": True, "minWidth": 40},
                 "rowSelection": "single",
                 "suppressRowClickSelection": False,
                 "defaultColDef": {"flex": 1, "resizable": True, "sortable": True, "filter": True},
+                ":getRowId": "(params) => params.data.id.toString()",
                 "columnDefs": [
-                    {"headerName": "", "field": "trade_id", "filter": "agNumberColumnFilter", "type": "rightAligned", "minWidth": 60, "cellDataType": "number", "hide": True},
+                    {"headerName": "ID", "field": "id", "hide": True, "minWidth": 60},
+                    {"headerName": "", "field": "trade_id", "filter": "agNumberColumnFilter", "type": "rightAligned", "minWidth": 60, "cellDataType": "number", "hide": False},
                     {
                         "headerName": "Open Time",
                         "field": "open_time",
                         "filter": "agDateColumnFilter",
+                        ":valueGetter": "(p) => new Date(p.data.open_time)",
                         ":valueFormatter": DATE_FORMATTER,
                         "minWidth": 120,
+                        "filterParams": {":comparator": DATE_FILTER_COMPARATOR},
                     },
                     {"headerName": "Win/Loss", "field": "win_loss_html", "filter": "agTextColumnFilter", "minWidth": 90},
                     {"headerName": "Strategy", "field": "strategy", "filter": "agTextColumnFilter", "minWidth": 100},
@@ -187,29 +215,48 @@ def journal():
                     {"headerName": "Mindstate", "field": "mindstate", "filter": "agTextColumnFilter", "minWidth": 100},
                     {"headerName": "Account Name", "field": "account_name", "filter": "agTextColumnFilter", "minWidth": 100},
                     {"headerName": "Exit Reason", "field": "account_type", "filter": "agTextColumnFilter", "minWidth": 100},
-                    {"headerName": "Account ID", "field": "account_id", "hide": False, "minWidth": 50, "filter": "agTextColumnFilter"},
+                    {"headerName": "Account ID", "field": "account_id", "hide": True, "minWidth": 50},
                 ],
                 "initialState": {"rowSelection": ["0"]},
                 "pagination": True,
                 "paginationPageSize": 50,
+                "rowData": trades_df.to_dict("records"),
             },
-            html_columns=[2, 5, 6],
+            html_columns=[3, 6, 7],
         )
         .classes("w-full")
-        .style("height: calc(100vh - 160px);")
+        .style("height: calc(100vh - 165px);")
     )
 
     journal_clear_filter_btn.on_click(lambda: journal.run_grid_method("setFilterModel", None))
 
     def on_tick_account_tree(e):
-        print(e.value)
-        accounts_ids = accounts_df.index.tolist()
-        new_selection = set(filter(lambda x: x in accounts_ids, e.value))
-        state["selected_accounts"] = new_selection
-        # journal.options["filterModel"] = {"account_id": {"filterType": "set", "values": ["1", "3", "5"]}}
-        # journal.update()
-        # TODO: fix this
-        journal.run_grid_method("setFilterModel", {"account_id": {"filterType": "text", "type": "contains", "filter": "1"}})
+        new_value = list(filter(lambda x: x in accounts_df.index.tolist(), e.value))
+        new_accounts = list(set(new_value) - set(state["selected_accounts"]))
+        removed_accounts = list(set(state["selected_accounts"]) - set(new_value))
+        if new_accounts:
+            new_trades = trades_df[trades_df["account_id"].isin(new_accounts)]
+            for account in new_accounts:
+                state["selected_accounts"].add(account)
+
+            journal.run_grid_method("applyTransaction", {"add": new_trades.to_dict("records")})
+
+        if removed_accounts:
+            removed_trades = trades_df[trades_df["account_id"].isin(removed_accounts)]
+            for account in removed_accounts:
+                state["selected_accounts"].remove(account)
+            journal.run_grid_method("applyTransaction", {"remove": removed_trades.to_dict("records")})
+
+        selected_live_accounts = set()
+        selected_demo_accounts = set()
+        for account in state["selected_accounts"]:
+            if account in live_account_ids:
+                selected_live_accounts.add(account)
+            if account in demo_account_ids:
+                selected_demo_accounts.add(account)
+        state["selected_live_accounts"] = selected_live_accounts
+        state["selected_demo_accounts"] = selected_demo_accounts
+        state["selected_account_live_demo_label_text"] = f"Live: {len(selected_live_accounts)}/{total_live_accounts_count} Demo: {len(selected_demo_accounts)}/{total_demo_accounts_count}"
 
     account_tree.on_tick(on_tick_account_tree)
 
