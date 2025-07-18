@@ -10,6 +10,7 @@ dependencies = [
     "asyncio>=3.4.3",
     "cryptography>=45.0.5",
     "dotenv>=0.9.9",
+    "metatrader5>=5.0.5120",
     "nicegui[highcharts]>=2.20.0",
     "numpy>=2.3.1",
     "pandas>=2.3.0",
