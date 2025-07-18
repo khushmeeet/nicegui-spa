@@ -1,41 +1,9 @@
 from nicegui import ui, app
 
+from dto import NewAccountData
 from component import local_file_picker
-from models import Broker, Account
 from models.enums import AccountType, PlatformType, CurrencyType
-from db.get_session import get_session
-
-
-class NewAccountData:
-    name: str = None
-    broker: str = None
-    login: str = None
-    password: str = None
-    type: str = None
-    platform: str = None
-    path: str = None
-    currency: str = None
-    starting_balance: float = 0
-    current_balance: float = 0
-    portable: bool = True
-    server: str = None
-
-    def get_db_account(self, session):
-        broker = session.query(Broker).filter_by(name=self.broker).first()
-        return Account(
-            name=self.name,
-            broker=broker,
-            login=self.login,
-            password=self.password,
-            type=AccountType(self.type),
-            platform=PlatformType(self.platform),
-            path=self.path,
-            currency=CurrencyType(self.currency),
-            starting_balance=self.starting_balance,
-            current_balance=self.current_balance,
-            portable=self.portable,
-            server=self.server,
-        )
+from data.commands import add_account
 
 
 new_account_data = NewAccountData()
@@ -73,6 +41,7 @@ async def accounts():
                     "rowSelection": "single",
                     "suppressRowClickSelection": False,
                     "columnDefs": [
+                        {"headerName": "ID", "field": "id", "filter": "agNumberColumnFilter", "width": 100, "minWidth": 100, "hide": True},
                         {"headerName": "Name", "field": "name", "checkboxSelection": True, "filter": "agTextColumnFilter", "width": 200, "minWidth": 100},
                         {"headerName": "Broker", "field": "broker", "filter": "agTextColumnFilter", "width": 150, "minWidth": 100},
                         {"headerName": "Type", "field": "type", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
@@ -155,36 +124,15 @@ async def accounts():
                     fpl.text = None
                     fpl.update()
 
-                def add_account():
-                    with get_session() as session:
-                        new_account_db_data = new_account_data.get_db_account(session)
-                        session.add(new_account_db_data)
-                        session.commit()
-                        dialog.close()
-                        ui.notify("Account added successfully", type="positive", position="top-right", duration=3000)
-
-                    new_grid_row = {
-                        # "ID": new_account_data.id,
-                        "name": new_account_data.name,
-                        "broker": new_account_data.broker,
-                        "login": new_account_data.login,
-                        "type": AccountType(new_account_data.type),
-                        "platform": PlatformType(new_account_data.platform),
-                        "server": new_account_data.server,
-                        "currency": CurrencyType(new_account_data.currency),
-                        "is_portable": new_account_data.portable,
-                        "starting_balance": new_account_data.starting_balance,
-                        "current_balance": new_account_data.current_balance,
-                        "path": new_account_data.path,
-                        "instruments_count": 0,
-                        "archived": False,
-                        "selected": False,
-                    }
+                def on_save_new_account():
+                    new_grid_row = add_account(new_account_data)
                     accounts_grid.options["rowData"].append(new_grid_row)
                     accounts_grid.update()
+                    dialog.close()
                     clear_form()
+                    ui.notify("Account added successfully", type="positive", position="top-right", duration=3000)
 
-                ui.button("Save", icon="save", on_click=add_account)
+                ui.button("Save", icon="save", on_click=on_save_new_account)
                 ui.button("Cancel", icon="close", on_click=dialog.close)
                 ui.button("Clear", icon="delete_outline", on_click=clear_form)
 

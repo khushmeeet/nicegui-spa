@@ -480,6 +480,17 @@ wheels = [
 ]
 
 [[package]]
+name = "metatrader5"
+version = "5.0.5120"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/25/f494133a7198efc54337ce187eadd20b4b74be522ec2ee54d229924f56ff/MetaTrader5-5.0.5120-cp313-cp313-win_amd64.whl", hash = "sha256:5f6596a68118911f8250db65d0e57976e109eac434cd2b25de831c4ddc103d3e", size = 50462, upload-time = "2025-06-16T10:26:27.893Z" },
+]
+
+[[package]]
 name = "multidict"
 version = "6.6.2"
 source = { registry = "https://pypi.org/simple" }
@@ -586,6 +597,7 @@ dependencies = [
     { name = "asyncio" },
     { name = "cryptography" },
     { name = "dotenv" },
+    { name = "metatrader5" },
     { name = "nicegui", extra = ["highcharts"] },
     { name = "numpy" },
     { name = "pandas" },
@@ -599,6 +611,7 @@ requires-dist = [
     { name = "asyncio", specifier = ">=3.4.3" },
     { name = "cryptography", specifier = ">=45.0.5" },
     { name = "dotenv", specifier = ">=0.9.9" },
+    { name = "metatrader5", specifier = ">=5.0.5120" },
     { name = "nicegui", extras = ["highcharts"], specifier = ">=2.20.0" },
     { name = "numpy", specifier = ">=2.3.1" },
     { name = "pandas", specifier = ">=2.3.0" },
