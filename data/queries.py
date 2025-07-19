@@ -8,11 +8,25 @@ import pandas as pd
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
+from sqlalchemy.inspection import inspect
 
-from models import Account, Broker, Instrument, Trade
-from models.enums import DirectionType, OrderType
+
+from models import Account, Instrument, Trade
+from models.enums import DirectionType, OrderType, CurrencySymbol, CurrencyType
 from db.get_session import get_session
 from utils.case_converter import snake_to_title
+
+
+def serialize_model(instance, exclude=None):
+    """Dynamically convert SQLAlchemy model to dict, optionally excluding fields."""
+    exclude = set(exclude or [])
+    data = {}
+    mapper = inspect(instance.__class__)
+    for column in mapper.columns:
+        name = column.key
+        if name not in exclude:
+            data[name] = getattr(instance, name)
+    return data
 
 
 def get_all_instruments() -> pd.DataFrame:
@@ -104,44 +118,29 @@ def get_all_items_from_trade() -> pd.DataFrame:
 def get_all_items_from_account() -> pd.DataFrame:
     with get_session() as session:
         data = []
-        query = (
-            session.query(
-                Account.id,
-                Account.name,
-                Account.login,
-                Account.type,
-                Account.platform,
-                Account.path,
-                Account.portable,
-                Account.server,
-                Account.currency,
-                Account.starting_balance,
-                Account.current_balance,
-                Account.archived,
-                Broker.name.label("broker"),
-                func.count(Instrument.id).label("instrument_count"),
-            )
-            .outerjoin(Broker, Account.broker_id == Broker.id)
-            .outerjoin(Instrument, Instrument.account_id == Account.id)
-            .group_by(Account.id, Broker.name)
-        )
-        accounts = query.all()
+        accounts = session.query(Account).options(joinedload(Account.broker), joinedload(Account.instruments)).all()
         for acc in accounts:
             data.append(
                 {
                     "id": acc.id,
                     "name": acc.name,
-                    "broker": acc.broker,
+                    "broker": acc.broker.name,
                     "currency": acc.currency,
+                    "currency_symbol": CurrencySymbol[acc.currency].value,
                     "login": acc.login,
                     "type": acc.type,
                     "platform": acc.platform,
                     "server": acc.server,
                     "path": acc.path,
-                    "instruments_count": acc.instrument_count,
+                    "instruments_count": len(acc.instruments),
                     "starting_balance": round(acc.starting_balance, 2),
                     "current_balance": round(acc.current_balance, 2),
                     "archived": acc.archived,
+                    "leverage": acc.leverage,
+                    "is_portable": acc.portable,
+                    "mt5_name": acc.mt5_name,
+                    "profit": acc.profit,
+                    "company": acc.mt5_company,
                 }
             )
         df = pd.DataFrame(data)
