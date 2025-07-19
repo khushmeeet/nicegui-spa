@@ -28,7 +28,7 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=False, unique=True)
     login = Column(String, nullable=False)
     __password_encrypted = Column("password", String, nullable=False)
     type = Column(SQLAlchemyEnum(AccountType), nullable=False)
@@ -41,6 +41,10 @@ class Account(Base):
     # Mt5 specific fields
     portable = Column(Boolean, nullable=False, default=True)
     server = Column(String, nullable=False)
+    leverage = Column(Integer, nullable=True)
+    mt5_name = Column(String, nullable=True)
+    profit = Column(Float, nullable=True)
+    mt5_company = Column(String, nullable=True)
 
     broker_id = Column(Integer, ForeignKey("brokers.id"), nullable=True)
     broker = relationship("Broker", back_populates="accounts")

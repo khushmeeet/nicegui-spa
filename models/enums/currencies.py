@@ -35,3 +35,28 @@ class CurrencyType(str, Enum):
     # Crypto (optional, not fiat)
     # BTC = "BTC"
     # ETH = "ETH"
+
+
+class CurrencySymbol(str, Enum):
+    USD = "$"  # US Dollar
+    EUR = "€"  # Euro
+    GBP = "£"  # British Pound
+    JPY = "¥"  # Japanese Yen
+    CHF = "Fr"  # Swiss Franc (also sometimes shown as "CHF")
+    AUD = "A$"  # Australian Dollar
+    CAD = "C$"  # Canadian Dollar
+    NZD = "NZ$"  # New Zealand Dollar
+
+    CNY = "CN¥"  # Chinese Yuan (Renminbi) — same symbol as JPY
+    HKD = "HK$"  # Hong Kong Dollar
+    NOK = "kr"  # Norwegian Krone
+    SGD = "S$"  # Singapore Dollar
+    KRW = "₩"  # South Korean Won
+    SEK = "kr"  # Swedish Krona
+    MXN = "MX$"  # Mexican Peso — same symbol as USD
+
+
+if __name__ == "__main__":
+    usd = CurrencyType.USD
+    usd_symbol = CurrencySymbol[usd.value]
+    print(usd_symbol.value)

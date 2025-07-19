@@ -1,15 +1,15 @@
 """Add tables
 
-Revision ID: 4670717b973b
+Revision ID: 9e886c2a431d
 Revises: 
-Create Date: 2025-07-18 00:51:15.602136
+Create Date: 2025-07-19 13:22:59.507836
 
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '4670717b973b'
+revision = '9e886c2a431d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -62,11 +62,16 @@ def upgrade():
     sa.Column('current_balance', sa.Float(), nullable=True),
     sa.Column('portable', sa.Boolean(), nullable=False),
     sa.Column('server', sa.String(), nullable=False),
+    sa.Column('leverage', sa.Integer(), nullable=True),
+    sa.Column('mt5_name', sa.String(), nullable=True),
+    sa.Column('profit', sa.Float(), nullable=True),
+    sa.Column('mt5_company', sa.String(), nullable=True),
     sa.Column('broker_id', sa.Integer(), nullable=True),
     sa.Column('archived', sa.Boolean(), nullable=False),
     sa.Column('is_valid', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['broker_id'], ['brokers.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
     )
     op.create_table('instruments',
     sa.Column('id', sa.Integer(), nullable=False),
