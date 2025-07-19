@@ -41,17 +41,34 @@ async def accounts():
                     "rowSelection": "single",
                     "suppressRowClickSelection": False,
                     "columnDefs": [
-                        {"headerName": "ID", "field": "id", "filter": "agNumberColumnFilter", "width": 100, "minWidth": 100, "hide": True},
-                        {"headerName": "Name", "field": "name", "checkboxSelection": True, "filter": "agTextColumnFilter", "width": 200, "minWidth": 100},
-                        {"headerName": "Broker", "field": "broker", "filter": "agTextColumnFilter", "width": 150, "minWidth": 100},
-                        {"headerName": "Type", "field": "type", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
-                        {"headerName": "Login", "field": "login", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
-                        {"headerName": "Platform", "field": "platform", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
-                        {"headerName": "Server", "field": "server", "filter": "agTextColumnFilter", "width": 200, "minWidth": 100},
+                        {"headerName": "ID", "field": "id", "filter": "agNumberColumnFilter", "minWidth": 100, "hide": True},
+                        {"headerName": "Name", "field": "name", "checkboxSelection": True, "filter": "agTextColumnFilter", "minWidth": 150},
+                        {"headerName": "Broker", "field": "broker", "filter": "agTextColumnFilter", "minWidth": 100},
+                        {"headerName": "Type", "field": "type", "filter": "agTextColumnFilter", "minWidth": 70},
+                        {"headerName": "Login", "field": "login", "filter": "agTextColumnFilter", "minWidth": 90},
+                        {"headerName": "Platform", "field": "platform", "filter": "agTextColumnFilter", "minWidth": 80},
+                        {"headerName": "Server", "field": "server", "filter": "agTextColumnFilter", "minWidth": 150},
                         {"headerName": "Path", "field": "path", "filter": "agTextColumnFilter", "minWidth": 100},
-                        {"headerName": "Currency", "field": "currency", "filter": "agTextColumnFilter", "width": 100, "minWidth": 100},
-                        {"headerName": "Starting Balance", "field": "starting_balance", "filter": "agNumberColumnFilter", "minWidth": 100},
-                        {"headerName": "Current Balance", "field": "current_balance", "filter": "agNumberColumnFilter", "minWidth": 100},
+                        {"headerName": "Currency", "field": "currency", "filter": "agTextColumnFilter", "minWidth": 100, "hide": True},
+                        {
+                            "headerName": "Starting Balance",
+                            "field": "starting_balance",
+                            "filter": "agNumberColumnFilter",
+                            "minWidth": 100,
+                            ":valueFormatter": "params => params.data.currency_symbol + ' '+ params.value.toFixed(2)",
+                        },
+                        {
+                            "headerName": "Current Balance",
+                            "field": "current_balance",
+                            "filter": "agNumberColumnFilter",
+                            "minWidth": 100,
+                            ":valueFormatter": "params => params.data.currency_symbol + ' '+ params.value.toFixed(2)",
+                        },
+                        {"headerName": "Portable", "field": "portable", "filter": "agTextColumnFilter", "minWidth": 100},
+                        {"headerName": "Leverage", "field": "leverage", "filter": "agNumberColumnFilter", "minWidth": 100},
+                        {"headerName": "MT5 Name", "field": "mt5_name", "filter": "agTextColumnFilter", "minWidth": 100},
+                        {"headerName": "Company", "field": "mt5_company", "filter": "agTextColumnFilter", "minWidth": 100},
+                        {"headerName": "Profit", "field": "profit", "filter": "agNumberColumnFilter", "minWidth": 100},
                     ],
                     "initialState": {"rowSelection": ["0"]},
                     "rowData": accounts_df.to_dict("records"),
@@ -81,11 +98,11 @@ async def accounts():
                     .bind_value_to(new_account_data, "platform", lambda x: PlatformType(x) if x is not None else None)
                 )
                 s = ui.input(label="Server", value="test-server").classes("w-full").bind_value_to(new_account_data, "server")
-                c = (
-                    ui.select([p.value for p in CurrencyType], label="Currency", value="USD")
-                    .classes("w-full")
-                    .bind_value_to(new_account_data, "currency", lambda x: CurrencyType(x) if x is not None else None)
-                )
+                # c = (
+                #     ui.select([p.value for p in CurrencyType], label="Currency", value="USD")
+                #     .classes("w-full")
+                #     .bind_value_to(new_account_data, "currency", lambda x: CurrencyType(x) if x is not None else None)
+                # )
                 ip = ui.checkbox("Is Portable", value=True).classes("w-full").bind_value_to(new_account_data, "portable")
             with ui.row():
                 ui.button("Choose file", on_click=pick_file, icon="folder")
@@ -115,8 +132,8 @@ async def accounts():
                     s.value = None
                     s.update()
                     new_account_data.currency = None
-                    c.value = None
-                    c.update()
+                    # c.value = None
+                    # c.update()
                     new_account_data.portable = True
                     ip.value = True
                     ip.update()
@@ -126,6 +143,7 @@ async def accounts():
 
                 def on_save_new_account():
                     new_grid_row = add_account(new_account_data)
+                    print(new_grid_row["currency_symbol"])
                     accounts_grid.options["rowData"].append(new_grid_row)
                     accounts_grid.update()
                     dialog.close()
@@ -141,43 +159,43 @@ async def accounts():
             with ui.element():
                 ui.button("Import From File", icon="upload", on_click=dialog.open).classes("mr-4")
                 ui.button("Add New Symbol", icon="add", on_click=dialog.open)
-        with ui.row().classes("w-full"):
-            symbols_grid = ui.aggrid(
-                options={
-                    "defaultColDef": {"resizable": True},
-                    "rowSelection": "single",
-                    "columnDefs": [
-                        {"headerName": "Symbol", "field": "symbol", "checkboxSelection": True, "filter": "agTextColumnFilter"},
-                        {"headerName": "Type", "field": "broker", "filter": "agTextColumnFilter"},
-                        {"headerName": "Sector", "field": "type", "filter": "agTextColumnFilter"},
-                        {"headerName": "Industry", "field": "login", "filter": "agTextColumnFilter"},
-                        {"headerName": "Country", "field": "platform", "filter": "agTextColumnFilter"},
-                        {"headerName": "Currency", "field": "server", "filter": "agTextColumnFilter"},
-                        {"headerName": "Exchange", "field": "path", "filter": "agTextColumnFilter"},
-                    ],
-                    "rowData": symbols_df.to_dict("records"),
-                },
-            )
+        # with ui.row().classes("w-full"):
+        #     symbols_grid = ui.aggrid(
+        #         options={
+        #             "defaultColDef": {"resizable": True},
+        #             "rowSelection": "single",
+        #             "columnDefs": [
+        #                 {"headerName": "Symbol", "field": "symbol", "checkboxSelection": True, "filter": "agTextColumnFilter"},
+        #                 {"headerName": "Type", "field": "broker", "filter": "agTextColumnFilter"},
+        #                 {"headerName": "Sector", "field": "type", "filter": "agTextColumnFilter"},
+        #                 {"headerName": "Industry", "field": "login", "filter": "agTextColumnFilter"},
+        #                 {"headerName": "Country", "field": "platform", "filter": "agTextColumnFilter"},
+        #                 {"headerName": "Currency", "field": "server", "filter": "agTextColumnFilter"},
+        #                 {"headerName": "Exchange", "field": "path", "filter": "agTextColumnFilter"},
+        #             ],
+        #             "rowData": symbols_df.to_dict("records"),
+        #         },
+        #     )
 
         with ui.row().classes("w-full items-center justify-between mt-4"):
             ui.label("💱 All Instruments").classes("text-2xl")
 
-        with ui.row().classes("w-full"):
-            instruments_grid = ui.aggrid(
-                options={
-                    "defaultColDef": {"resizable": True},
-                    "rowSelection": "single",
-                    "columnDefs": [
-                        {"headerName": "Ticker", "field": "ticker", "checkboxSelection": True, "filter": "agTextColumnFilter"},
-                        {"headerName": "Symbol", "field": "symbol", "filter": "agTextColumnFilter"},
-                        {"headerName": "Account Name", "field": "account_name", "filter": "agTextColumnFilter"},
-                        {"headerName": "Broker", "field": "account_broker", "filter": "agTextColumnFilter"},
-                        # {"headerName": "Sector", "field": "type", "filter": "agTextColumnFilter"},
-                        # {"headerName": "Industry", "field": "login", "filter": "agTextColumnFilter"},
-                        # {"headerName": "Country", "field": "platform", "filter": "agTextColumnFilter"},
-                        # {"headerName": "Currency", "field": "server", "filter": "agTextColumnFilter"},
-                        # {"headerName": "Exchange", "field": "path", "filter": "agTextColumnFilter"},
-                    ],
-                    "rowData": instruments_df.to_dict("records"),
-                },
-            )
+        # with ui.row().classes("w-full"):
+        #     instruments_grid = ui.aggrid(
+        #         options={
+        #             "defaultColDef": {"resizable": True},
+        #             "rowSelection": "single",
+        #             "columnDefs": [
+        #                 {"headerName": "Ticker", "field": "ticker", "checkboxSelection": True, "filter": "agTextColumnFilter"},
+        #                 {"headerName": "Symbol", "field": "symbol", "filter": "agTextColumnFilter"},
+        #                 {"headerName": "Account Name", "field": "account_name", "filter": "agTextColumnFilter"},
+        #                 {"headerName": "Broker", "field": "account_broker", "filter": "agTextColumnFilter"},
+        #                 # {"headerName": "Sector", "field": "type", "filter": "agTextColumnFilter"},
+        #                 # {"headerName": "Industry", "field": "login", "filter": "agTextColumnFilter"},
+        #                 # {"headerName": "Country", "field": "platform", "filter": "agTextColumnFilter"},
+        #                 # {"headerName": "Currency", "field": "server", "filter": "agTextColumnFilter"},
+        #                 # {"headerName": "Exchange", "field": "path", "filter": "agTextColumnFilter"},
+        #             ],
+        #             "rowData": instruments_df.to_dict("records"),
+        #         },
+        #     )
