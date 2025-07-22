@@ -137,8 +137,9 @@ def get_all_items_from_account() -> pd.DataFrame:
                     "current_balance": round(acc.current_balance, 2),
                     "archived": acc.archived,
                     "leverage": acc.leverage,
-                    "is_portable": acc.portable,
+                    "portable": acc.portable,
                     "mt5_name": acc.mt5_name,
+                    "mt5_company": acc.mt5_company,
                     "profit": acc.profit,
                     "company": acc.mt5_company,
                 }

@@ -34,32 +34,32 @@ def add_account(new_account_data: NewAccountData):
     )
 
     with get_session() as session:
-        new_account_db_data = new_account_data.get_db_account(session)
+        new_account_db_data = new_account_data.get_db_account(session, mt5_account_info)
         session.add(new_account_db_data)
         session.commit()
         new_grid_row = {
             "id": new_account_db_data.id,
             "name": new_account_db_data.name,
             "broker": new_account_db_data.broker.name,
-            "login": mt5_account_info.login,
-            "type": AccountType(new_account_data.type),
-            "platform": PlatformType(new_account_data.platform),
-            "server": mt5_account_info.server,
-            "currency": CurrencyType(mt5_account_info.currency),
-            "is_portable": new_account_data.portable,
-            "starting_balance": mt5_account_info.balance,
-            "current_balance": mt5_account_info.balance,
-            "path": new_account_data.path,
+            "login": new_account_db_data.login,
+            "type": AccountType(new_account_db_data.type),
+            "platform": PlatformType(new_account_db_data.platform),
+            "server": new_account_db_data.server,
+            "currency": new_account_db_data.currency,
+            "is_portable": new_account_db_data.portable,
+            "starting_balance": new_account_db_data.starting_balance,
+            "current_balance": new_account_db_data.current_balance,
+            "path": new_account_db_data.path,
             "instruments_count": 0,
             "archived": False,
             "selected": False,
-            "leverage": mt5_account_info.leverage,
-            "mt5_name": mt5_account_info.name,
-            "mt5_company": mt5_account_info.company,
+            "leverage": new_account_db_data.leverage,
+            "mt5_name": new_account_db_data.mt5_name,
+            "mt5_company": new_account_db_data.mt5_company,
             "is_valid": True,
-            "portable": new_account_data.portable,
+            "portable": new_account_db_data.portable,
+            "currency_symbol": CurrencySymbol[new_account_db_data.currency].value,
         }
-        # print(mt5_account_info.currency, CurrencyType[mt5_account_info.currency])
         return new_grid_row
 
 
