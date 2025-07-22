@@ -11,25 +11,25 @@ class NewAccountData:
     type: str = None
     platform: str = None
     path: str = None
-    currency: str = None
-    starting_balance: float = 0
-    current_balance: float = 0
     portable: bool = True
     server: str = None
 
-    def get_db_account(self, session):
+    def get_db_account(self, session, mt5_account_info):
         broker = session.query(Broker).filter_by(name=self.broker).first()
         return Account(
             name=self.name,
             broker=broker,
-            login=self.login,
+            login=mt5_account_info.login,
             password=self.password,
             type=AccountType(self.type),
             platform=PlatformType(self.platform),
             path=self.path,
-            currency=CurrencyType(self.currency),
-            starting_balance=self.starting_balance,
-            current_balance=self.current_balance,
+            currency=CurrencyType(mt5_account_info.currency),
+            starting_balance=mt5_account_info.balance,
+            current_balance=mt5_account_info.balance,
             portable=self.portable,
-            server=self.server,
+            server=mt5_account_info.server,
+            mt5_name=mt5_account_info.name,
+            mt5_company=mt5_account_info.company,
+            leverage=mt5_account_info.leverage,
         )
