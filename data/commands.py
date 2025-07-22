@@ -74,7 +74,6 @@ def add_symbol(new_symbol_data: NewSymbolData):
             "description": new_symbol_db_data.description,
             "type": SymbolType(new_symbol_db_data.type),
         }
-        # print(mt5_account_info.currency, CurrencyType[mt5_account_info.currency])
         return new_grid_row
 
 

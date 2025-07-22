@@ -184,7 +184,6 @@ async def accounts():
 
                 def on_save_new_account():
                     new_grid_row = add_account(new_account_data)
-                    print(new_grid_row["currency_symbol"])
                     accounts_grid.options["rowData"].append(new_grid_row)
                     accounts_grid.update()
                     add_new_account_dialog.close()
@@ -291,22 +290,22 @@ async def accounts():
         with ui.row().classes("w-full items-center justify-between mt-4"):
             ui.label("💱 All Instruments").classes("text-2xl")
 
-        # with ui.row().classes("w-full"):
-        #     instruments_grid = ui.aggrid(
-        #         options={
-        #             "defaultColDef": {"resizable": True},
-        #             "rowSelection": "single",
-        #             "columnDefs": [
-        #                 {"headerName": "Ticker", "field": "ticker", "checkboxSelection": True, "filter": "agTextColumnFilter"},
-        #                 {"headerName": "Symbol", "field": "symbol", "filter": "agTextColumnFilter"},
-        #                 {"headerName": "Account Name", "field": "account_name", "filter": "agTextColumnFilter"},
-        #                 {"headerName": "Broker", "field": "account_broker", "filter": "agTextColumnFilter"},
-        #                 # {"headerName": "Sector", "field": "type", "filter": "agTextColumnFilter"},
-        #                 # {"headerName": "Industry", "field": "login", "filter": "agTextColumnFilter"},
-        #                 # {"headerName": "Country", "field": "platform", "filter": "agTextColumnFilter"},
-        #                 # {"headerName": "Currency", "field": "server", "filter": "agTextColumnFilter"},
-        #                 # {"headerName": "Exchange", "field": "path", "filter": "agTextColumnFilter"},
-        #             ],
-        #             "rowData": instruments_df.to_dict("records"),
-        #         },
-        #     )
+        with ui.row().classes("w-full"):
+            instruments_grid = ui.aggrid(
+                options={
+                    "defaultColDef": {"resizable": True},
+                    "rowSelection": "single",
+                    "columnDefs": [
+                        {"headerName": "Ticker", "field": "ticker", "checkboxSelection": True, "filter": "agTextColumnFilter"},
+                        {"headerName": "Symbol", "field": "symbol", "filter": "agTextColumnFilter"},
+                        {"headerName": "Account Name", "field": "account_name", "filter": "agTextColumnFilter"},
+                        {"headerName": "Broker", "field": "account_broker", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Sector", "field": "type", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Industry", "field": "login", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Country", "field": "platform", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Currency", "field": "server", "filter": "agTextColumnFilter"},
+                        # {"headerName": "Exchange", "field": "path", "filter": "agTextColumnFilter"},
+                    ],
+                    "rowData": instruments_df.to_dict("records"),
+                },
+            )
