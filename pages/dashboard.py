@@ -1,3 +1,5 @@
+import calendar
+from datetime import datetime
 from nicegui import ui, app
 
 from utils.tree import build_tree, get_mapping_and_grouping_list
@@ -61,20 +63,62 @@ def dashboard():
 
         ui.toggle(["Value", "Percent"])
 
-    with ui.row().classes("mb-2"):
-        with ui.grid(columns=7, rows=1).classes("mr-5"):
-            for weekday in WEEKDAYS:
-                ui.label(weekday).classes("text-md w-32 pl-2")
-        ui.label("Week").classes("text-md w-32 pl-2")
-    with ui.row().classes("w-full"):
-        with ui.grid(columns=7, rows=6).classes("mr-5"):
-            for i in range(1, 36):
-                with ui.card().classes("h-32 w-32"):
-                    ui.label(f"Day {i}")
-        with ui.grid(columns=1, rows=6):
-            for i in range(1, 6):
-                with ui.card().classes("h-32 w-32"):
-                    ui.label(f"Week {i}")
+    YEAR, MONTH = 2025, 7
+    DAYS_IN_MONTH = calendar.monthrange(YEAR, MONTH)[1]
+    FIRST_WEEKDAY = calendar.monthrange(YEAR, MONTH)[0]  # 0=Monday, 6=Sunday
+
+    # Adjust weekday order to start from Sunday
+    WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    FIRST_WEEKDAY = (FIRST_WEEKDAY + 1) % 7
+
+    # Dummy P&L data
+    DAILY_PNL = {day: (day - 15) * 20 for day in range(1, DAYS_IN_MONTH + 1)}
+    TRADE_COUNTS = {day: abs((day - 15) % 5) + 1 for day in range(1, DAYS_IN_MONTH + 1)}
+
+    with ui.grid(columns=8).classes("gap-3 mb-3"):
+        for day in WEEKDAYS:
+            with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative"):
+                ui.label(day).classes("text-md text-center font-semibold")
+        with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative"):
+            ui.label("Week").classes("text-md text-center font-semibold")
+
+    # ---------- GRID BODY ----------
+    with ui.grid(columns=8).classes("gap-3"):
+
+        day_counter = 1
+        week_counter = 0
+        while day_counter <= DAYS_IN_MONTH:
+            week_counter += 1
+            week_pnl = 0
+            week_trades_count = 0
+
+            # 7 days per week
+            for weekday in range(7):
+                if (week_counter == 1 and weekday < FIRST_WEEKDAY) or day_counter > DAYS_IN_MONTH:
+                    # Empty slot before or after the month's range
+                    ui.card().classes("bg-gray-100")
+                else:
+                    pnl = DAILY_PNL.get(day_counter, 0)
+                    color = "text-green-600" if pnl > 0 else "text-red-600" if pnl < 0 else "text-gray-600"
+                    date_str = datetime(YEAR, MONTH, day_counter).strftime("%b %d")
+                    trades = TRADE_COUNTS.get(day_counter, 0)
+                    with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative"):
+                        ui.label(date_str).classes("text-xs text-gray-500")
+                        with ui.column().classes("items-end"):
+                            ui.label(f"{pnl:+}").classes(f"text-sm font-bold {color}")
+                            ui.label(f"{trades} trades").classes("text-xs text-gray-500")
+
+                    week_pnl += pnl
+                    day_counter += 1
+                    week_trades_count += trades
+
+            # Add week total at the end
+            week_color = "text-green-700" if week_pnl > 0 else "text-red-700" if week_pnl < 0 else "text-gray-700"
+            with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative"):
+                ui.label(f"Week {week_counter}").classes("text-xs text-gray-500")
+                with ui.column().classes("items-end"):
+                    ui.label(f"{week_pnl:+}").classes(f"text-sm font-bold {color}")
+                    ui.label(f"{week_trades_count} trades").classes("text-xs text-gray-500")
 
     if right_drawer and right_drawer_rendered_by != "dashboard":
         right_drawer.clear()
