@@ -16,14 +16,6 @@ def dashboard():
 
     tree_enum_mapping, grouping_list = get_mapping_and_grouping_list(brokers_df)
 
-    # with ui.row().classes("mb-5"):
-    #     with ui.card().classes("h-32 w-64"):
-    #         ui.label("Metric 1")
-    #     with ui.card().classes("h-32 w-64"):
-    #         ui.label("Metric 1")
-    #
-    # ui.separator().classes("mb-5")
-
     with ui.row().classes("w-full justify-between mb-4"):
         with ui.dropdown_button("Select Accounts(s)", icon="business_center"):
             with ui.column().classes("w-full p-4"):
