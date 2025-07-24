@@ -75,11 +75,11 @@ def dashboard():
     DAILY_PNL = {day: (day - 15) * 20 for day in range(1, DAYS_IN_MONTH + 1)}
     TRADE_COUNTS = {day: abs((day - 15) % 5) + 1 for day in range(1, DAYS_IN_MONTH + 1)}
 
-    with ui.grid(columns=8).classes("gap-3 mb-3"):
+    with ui.grid(columns=8).classes("gap-3 mb-5 mt-5"):
         for day in WEEKDAYS:
             with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative"):
                 ui.label(day).classes("text-md text-center font-semibold")
-        with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative"):
+        with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2"):
             ui.label("Week").classes("text-md text-center font-semibold")
 
     # ---------- GRID BODY ----------
@@ -92,10 +92,8 @@ def dashboard():
             week_pnl = 0
             week_trades_count = 0
 
-            # 7 days per week
             for weekday in range(7):
                 if (week_counter == 1 and weekday < FIRST_WEEKDAY) or day_counter > DAYS_IN_MONTH:
-                    # Empty slot before or after the month's range
                     ui.card().classes("bg-gray-100")
                 else:
                     pnl = DAILY_PNL.get(day_counter, 0)
@@ -114,7 +112,7 @@ def dashboard():
 
             # Add week total at the end
             week_color = "text-green-700" if week_pnl > 0 else "text-red-700" if week_pnl < 0 else "text-gray-700"
-            with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative"):
+            with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2"):
                 ui.label(f"Week {week_counter}").classes("text-xs text-gray-500")
                 with ui.column().classes("items-end"):
                     ui.label(f"{week_pnl:+}").classes(f"text-sm font-bold {color}")
