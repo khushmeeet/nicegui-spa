@@ -3,6 +3,7 @@ from .analytics import analytics
 from .accounts import accounts
 from .trading import trading
 from .journal import journal
+from .general import general
 
 pages = {
     "dashboard": {
@@ -39,5 +40,12 @@ pages = {
         "label": "Accounts",
         "icon": "account_balance",
         "path": "/accounts",
+    },
+    "general": {
+        "show": general,
+        "object": None,
+        "label": "General",
+        "icon": "article",
+        "path": "/general",
     },
 }

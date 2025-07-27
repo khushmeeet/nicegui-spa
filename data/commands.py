@@ -4,9 +4,9 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-from dto import NewAccountData
+from dto import NewAccountData, NewSymbolData
 from models import Instrument, Suffix, Symbol
-from models.enums import AccountType, PlatformType, CurrencyType, CurrencySymbol
+from models.enums import AccountType, PlatformType, CurrencySymbol, SymbolType
 from db.get_session import get_session
 from utils.ticker import extract_symbol_and_suffix
 import MetaTrader5 as mt5
@@ -63,6 +63,26 @@ def add_account(new_account_data: NewAccountData):
         return new_grid_row
 
 
+def add_symbol(new_symbol_data: NewSymbolData):
+    with get_session() as session:
+        new_symbol_db_data = new_symbol_data.get_db_symbol()
+        session.add(new_symbol_db_data)
+        session.commit()
+        new_grid_row = {
+            "id": new_symbol_db_data.id,
+            "symbol": new_symbol_db_data.symbol,
+            "description": new_symbol_db_data.description,
+            "type": SymbolType(new_symbol_db_data.type),
+        }
+        return new_grid_row
+
+
+def delete_symbols(ids):
+    with get_session() as session:
+        session.query(Symbol).filter(Symbol.id.in_(ids)).delete()
+        session.commit()
+
+
 def get_account_info_mt5(login, password, server, path, portable):
     res = mt5.initialize(login=login, password=password, server=server, path=path, portable=portable)
     if not res:
@@ -73,6 +93,30 @@ def get_account_info_mt5(login, password, server, path, portable):
     print(acc)
     mt5.shutdown()
     return acc
+
+
+def add_array_of_dicts(model, data):
+    if not data:
+        raise ValueError("No data provided")
+
+    columns_info = {col.name: col for col in model.__table__.columns}
+    required_columns = {name for name, col in columns_info.items() if not col.primary_key}
+    cleaned_data = []
+
+    for i, row in enumerate(data):
+        print(required_columns, {key.lower() for key in row.keys()})
+        missing = required_columns - {key.lower() for key in row.keys()}
+        if missing:
+            raise ValueError(f"Row {i} is missing required non-nullable keys: {missing}")
+
+        cleaned_row = {k.lower(): v for k, v in row.items() if k.lower() in required_columns}
+        cleaned_data.append(cleaned_row)
+        print(f"Row {i} cleaned: {cleaned_row}")
+        break
+
+    # with get_session as session:
+    #     session.bulk_insert_mappings(model, cleaned_data)
+    #     session.commit()
 
 
 if __name__ == "__main__":
