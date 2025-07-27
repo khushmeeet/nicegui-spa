@@ -42,7 +42,7 @@ def get_all_instruments() -> pd.DataFrame:
                     "ticker": inst.ticker,
                     "description": inst.description,
                     "symbol_id": inst.symbol_id,
-                    "symbol": inst.symbol.symbol,
+                    "symbol": inst.symbol.symbol if inst.symbol else None,
                     "account_id": inst.account_id,
                     "lot_size": inst.lot_size,
                     "leverage": inst.leverage,
@@ -86,7 +86,7 @@ def get_all_items_from_trade() -> pd.DataFrame:
                     "actual_rr": t.actual_reward_risk,
                     "account_name": t.account.name,
                     "account_broker": t.account.broker.name,
-                    "symbol": t.symbol.symbol,
+                    "symbol": t.symbol.symbol if t.symbol else None,
                     "instrument": t.instrument.id,
                     "strategy": t.strategy.name,
                     "starting_balance": t.starting_balance,
@@ -162,13 +162,13 @@ def get_all_items_from_table(table, fields) -> pd.DataFrame:
         for item in items:
             data.append({**{field: getattr(item, field) for field in fields}})
         df = pd.DataFrame(data)
-        try:
-            df.set_index(
-                "id",
-                inplace=True,
-            )
-        except KeyError:
-            pass
+        # try:
+        #     df.set_index(
+        #         "id",
+        #         inplace=True,
+        #     )
+        # except KeyError:
+        #     pass
         return df
 
 

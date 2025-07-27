@@ -28,7 +28,7 @@ def main(path: str = None):
     app.storage.client["accounts_df"] = get_all_items_from_account()
     app.storage.client["trades_df"] = get_all_items_from_trade()
     app.storage.client["strategies_df"] = get_all_items_from_table(Strategy, ["id", "name", "description", "tag"])
-    app.storage.client["symbols_df"] = get_all_items_from_table(Symbol, ["id", "symbol", "description", "type", "sector", "industry", "country", "currency", "exchange"])
+    app.storage.client["symbols_df"] = get_all_items_from_table(Symbol, ["id", "symbol", "description", "type"])
     app.storage.client["brokers_df"] = get_all_items_from_table(Broker, ["id", "name"])
     app.storage.client["instruments_df"] = get_all_instruments()
 
