@@ -104,7 +104,6 @@ def add_array_of_dicts(model, data):
     cleaned_data = []
 
     for i, row in enumerate(data):
-        print(required_columns, {key.lower() for key in row.keys()})
         missing = required_columns - {key.lower() for key in row.keys()}
         if missing:
             raise ValueError(f"Row {i} is missing required non-nullable keys: {missing}")
