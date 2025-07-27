@@ -94,7 +94,7 @@ def dashboard():
                     with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative").props("flat bordered"):
                         ui.label(date_str).classes("text-xs text-gray-500")
                         with ui.column().classes("items-end"):
-                            ui.label(f"{pnl:+}").classes(f"md:text-lg font-bold {color}")
+                            ui.label(f"{pnl}").classes(f"md:text-md font-bold {color}")
                             with ui.row().classes("gap-1"):
                                 ui.label(f"{trades}").classes("text-xs text-gray-500")
                                 ui.label("trades").classes("text-xs text-gray-500 max-md:hidden")
@@ -108,7 +108,7 @@ def dashboard():
             with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2").props("flat bordered"):
                 ui.label(f"Week {week_counter}").classes("text-xs text-gray-500")
                 with ui.column().classes("items-end"):
-                    ui.label(f"{week_pnl:+}").classes(f"md:text-lg font-bold {color}")
+                    ui.label(f"{week_pnl}").classes(f"md:text-md font-bold {color}")
                     with ui.row().classes("gap-1"):
                         ui.label(f"{week_trades_count}").classes("text-xs text-gray-500")
                         ui.label("trades").classes("text-xs text-gray-500 max-md:hidden")
