@@ -2,4 +2,4 @@ from nicegui import ui
 
 
 def general():
-    ui.markdown("## 🏦 General")
+    ui.markdown("## Symbols and Brokers ")
