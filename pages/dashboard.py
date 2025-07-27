@@ -74,7 +74,6 @@ def dashboard():
         with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2").props("flat bordered"):
             ui.label("Week").classes("text-md text-center font-semibold")
 
-    # ---------- GRID BODY ----------
     with ui.grid(columns=8).classes("gap-3"):
 
         day_counter = 1
@@ -89,14 +88,16 @@ def dashboard():
                     ui.card().classes("bg-gray-100").props("flat bordered")
                 else:
                     pnl = DAILY_PNL.get(day_counter, 0)
-                    color = "text-green-600" if pnl > 0 else "text-red-600" if pnl < 0 else "text-gray-600"
+                    color = "text-emerald-600" if pnl > 0 else "text-rose-600" if pnl < 0 else "text-gray-600"
                     date_str = datetime(YEAR, MONTH, day_counter).strftime("%b %d")
                     trades = TRADE_COUNTS.get(day_counter, 0)
                     with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative").props("flat bordered"):
                         ui.label(date_str).classes("text-xs text-gray-500")
                         with ui.column().classes("items-end"):
-                            ui.label(f"{pnl:+}").classes(f"text-sm font-bold {color}")
-                            ui.label(f"{trades} trades").classes("text-xs text-gray-500")
+                            ui.label(f"{pnl}").classes(f"md:text-md font-bold {color}")
+                            with ui.row().classes("gap-1"):
+                                ui.label(f"{trades}").classes("text-xs text-gray-500")
+                                ui.label("trades").classes("text-xs text-gray-500 max-md:hidden")
 
                     week_pnl += pnl
                     day_counter += 1
@@ -107,8 +108,10 @@ def dashboard():
             with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2").props("flat bordered"):
                 ui.label(f"Week {week_counter}").classes("text-xs text-gray-500")
                 with ui.column().classes("items-end"):
-                    ui.label(f"{week_pnl:+}").classes(f"text-sm font-bold {color}")
-                    ui.label(f"{week_trades_count} trades").classes("text-xs text-gray-500")
+                    ui.label(f"{week_pnl}").classes(f"md:text-md font-bold {color}")
+                    with ui.row().classes("gap-1"):
+                        ui.label(f"{week_trades_count}").classes("text-xs text-gray-500")
+                        ui.label("trades").classes("text-xs text-gray-500 max-md:hidden")
 
     if right_drawer and right_drawer_rendered_by != "dashboard":
         right_drawer.clear()
