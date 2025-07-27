@@ -75,7 +75,6 @@ def dashboard():
             ui.label("Week").classes("text-md text-center font-semibold")
 
     with ui.grid(columns=8).classes("gap-3"):
-
         day_counter = 1
         week_counter = 0
         while day_counter <= DAYS_IN_MONTH:
