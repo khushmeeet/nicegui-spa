@@ -69,9 +69,9 @@ def dashboard():
 
     with ui.grid(columns=8).classes("gap-3 mb-5 mt-5"):
         for day in WEEKDAYS:
-            with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative"):
+            with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative").props("flat bordered"):
                 ui.label(day).classes("text-md text-center font-semibold")
-        with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2"):
+        with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2").props("flat bordered"):
             ui.label("Week").classes("text-md text-center font-semibold")
 
     # ---------- GRID BODY ----------
@@ -86,13 +86,13 @@ def dashboard():
 
             for weekday in range(7):
                 if (week_counter == 1 and weekday < FIRST_WEEKDAY) or day_counter > DAYS_IN_MONTH:
-                    ui.card().classes("bg-gray-100")
+                    ui.card().classes("bg-gray-100").props("flat bordered")
                 else:
                     pnl = DAILY_PNL.get(day_counter, 0)
                     color = "text-green-600" if pnl > 0 else "text-red-600" if pnl < 0 else "text-gray-600"
                     date_str = datetime(YEAR, MONTH, day_counter).strftime("%b %d")
                     trades = TRADE_COUNTS.get(day_counter, 0)
-                    with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative"):
+                    with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative").props("flat bordered"):
                         ui.label(date_str).classes("text-xs text-gray-500")
                         with ui.column().classes("items-end"):
                             ui.label(f"{pnl:+}").classes(f"text-sm font-bold {color}")
@@ -104,7 +104,7 @@ def dashboard():
 
             # Add week total at the end
             week_color = "text-green-700" if week_pnl > 0 else "text-red-700" if week_pnl < 0 else "text-gray-700"
-            with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2"):
+            with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2").props("flat bordered"):
                 ui.label(f"Week {week_counter}").classes("text-xs text-gray-500")
                 with ui.column().classes("items-end"):
                     ui.label(f"{week_pnl:+}").classes(f"text-sm font-bold {color}")
