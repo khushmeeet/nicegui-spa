@@ -3,6 +3,7 @@ from datetime import datetime
 from nicegui import ui, app
 
 from utils.tree import build_tree, get_mapping_and_grouping_list
+from data.queries import get_daily_trade_counts, get_daily_pnl
 
 WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
@@ -63,9 +64,8 @@ def dashboard():
     WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     FIRST_WEEKDAY = (FIRST_WEEKDAY + 1) % 7
 
-    # Dummy P&L data
-    DAILY_PNL = {day: (day - 15) * 20 for day in range(1, DAYS_IN_MONTH + 1)}
-    TRADE_COUNTS = {day: abs((day - 15) % 5) + 1 for day in range(1, DAYS_IN_MONTH + 1)}
+    DAILY_PNL = get_daily_pnl(YEAR, MONTH)
+    TRADE_COUNTS = get_daily_trade_counts(YEAR, MONTH)
 
     with ui.grid(columns=8).classes("gap-3 mb-5 mt-5"):
         for day in WEEKDAYS:
@@ -93,7 +93,7 @@ def dashboard():
                     with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative").props("flat bordered"):
                         ui.label(date_str).classes("text-xs text-gray-500")
                         with ui.column().classes("items-end"):
-                            ui.label(f"{pnl}").classes(f"md:text-md font-bold {color}")
+                            ui.label(f"{pnl:.2f}").classes(f"md:text-md font-bold {color}")
                             with ui.row().classes("gap-1"):
                                 ui.label(f"{trades}").classes("text-xs text-gray-500")
                                 ui.label("trades").classes("text-xs text-gray-500 max-md:hidden")
@@ -107,7 +107,7 @@ def dashboard():
             with ui.card().classes("p-2 flex flex-col justify-between items-stretch relative ml-2").props("flat bordered"):
                 ui.label(f"Week {week_counter}").classes("text-xs text-gray-500")
                 with ui.column().classes("items-end"):
-                    ui.label(f"{week_pnl}").classes(f"md:text-md font-bold {color}")
+                    ui.label(f"{week_pnl:.2f}").classes(f"md:text-md font-bold {color}")
                     with ui.row().classes("gap-1"):
                         ui.label(f"{week_trades_count}").classes("text-xs text-gray-500")
                         ui.label("trades").classes("text-xs text-gray-500 max-md:hidden")

@@ -172,6 +172,43 @@ def get_all_items_from_table(table, fields) -> pd.DataFrame:
         return df
 
 
+def get_daily_trade_counts(year: int, month: int) -> dict:
+    with get_session() as session:
+        result = (
+            session.query(
+                func.extract("day", Trade.open_time).label("day"), 
+                func.count(Trade.id).label("trade_count")
+            )
+            .filter(
+                func.extract("year", Trade.open_time) == year, 
+                func.extract("month", Trade.open_time) == month
+            )
+            .group_by(func.extract("day", Trade.open_time))
+            .all()
+        )
+
+        return {int(row.day): row.trade_count for row in result}
+
+
+def get_daily_pnl(year: int, month: int) -> dict:
+    with get_session() as session:
+        result = (
+            session.query(
+                func.extract("day", Trade.exit_time).label("day"), 
+                func.sum(Trade.actual_pnl).label("daily_pnl")
+            )
+            .filter(
+                func.extract("year", Trade.exit_time) == year, 
+                func.extract("month", Trade.exit_time) == month,
+                Trade.actual_pnl.isnot(None)
+            )
+            .group_by(func.extract("day", Trade.exit_time))
+            .all()
+        )
+
+        return {int(row.day): float(row.daily_pnl) for row in result}
+
+
 if __name__ == "__main__":
     df = get_all_items_from_account()
     print(df.head())
